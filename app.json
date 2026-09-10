@@ -24,7 +24,13 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "PRODEX necesita acceso a la cámara para escanear códigos de barras de productos."
+        }
+      ]
     ]
   }
 }

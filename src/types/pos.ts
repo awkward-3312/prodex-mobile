@@ -29,3 +29,9 @@ export type PosTaxConfig = {
 };
 
 export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'mixed';
+
+export type BarcodeLookupResult =
+  | { status: 'found'; product: PosProduct }
+  | { status: 'not_found'; barcode: string }
+  | { status: 'out_of_stock'; product: PosProduct }
+  | { status: 'stock_limit_reached'; product: PosProduct };
