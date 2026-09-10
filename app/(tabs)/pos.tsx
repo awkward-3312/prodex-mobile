@@ -73,7 +73,7 @@ export default function PosScreen() {
         renderItem={({ item }) => <ProductCard product={item} onPress={() => addProduct(item)} />}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={<View style={styles.emptyProducts}><Text style={styles.emptyTitle}>No encontramos productos</Text><Text style={styles.emptyText}>Prueba con otro nombre, SKU o código de barras.</Text></View>}
-        contentContainerStyle={[styles.content, { paddingBottom: 136 + insets.bottom }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 96 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       />

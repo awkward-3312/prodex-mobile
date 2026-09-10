@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radii, spacing, typography } from '../../theme';
 import type { CartItem } from '../../types/pos';
@@ -11,13 +11,14 @@ type Props = { visible: boolean; items: CartItem[]; subtotalCents: number; disco
 
 export function CartSheet({ visible, items, subtotalCents, discountCents, taxCents, totalCents, onClose, onIncrease, onDecrease, onRemove, onCheckout }: Props) {
   const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const hasItems = items.length > 0;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable accessibilityLabel="Cerrar carrito" accessibilityRole="button" onPress={onClose} style={styles.backdrop} />
-        <SafeAreaView edges={['bottom']} style={[styles.sheet, { maxHeight: height * 0.8 }]}>
+        <SafeAreaView edges={[]} style={[styles.sheet, { maxHeight: height * 0.8, paddingBottom: insets.bottom + spacing.md }]}>
           <View style={styles.handle} />
           <View style={styles.header}><View><Text style={styles.title}>Carrito actual</Text><Text style={styles.customerLabel}>Cliente</Text><Text style={styles.customer}>Consumidor final</Text></View><Pressable accessibilityLabel="Cerrar carrito" accessibilityRole="button" onPress={onClose} style={styles.close}><Ionicons name="close" size={21} color={colors.ink} /></Pressable></View>
           <View style={styles.customerAction}><Text style={styles.customerHint}>Venta sin cliente asignado</Text><Pressable accessibilityLabel="Cambiar cliente" accessibilityRole="button" onPress={() => undefined}><Text style={styles.change}>Cambiar</Text></Pressable></View>
@@ -36,7 +37,7 @@ export function CartSheet({ visible, items, subtotalCents, discountCents, taxCen
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(23, 50, 77, 0.38)' },
-  sheet: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg, backgroundColor: colors.surface },
+  sheet: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg, backgroundColor: colors.surface },
   handle: { alignSelf: 'center', width: 38, height: 4, marginBottom: spacing.md, borderRadius: radii.pill, backgroundColor: colors.line },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   title: { color: colors.ink, fontSize: typography.title, fontWeight: '800' },
@@ -47,7 +48,7 @@ const styles = StyleSheet.create({
   customerHint: { color: colors.inkMuted, fontSize: 11 },
   change: { color: colors.brand, fontSize: 12, fontWeight: '800' },
   productsTitle: { marginTop: spacing.sm, color: colors.ink, fontSize: 14, fontWeight: '800' },
-  items: { flexGrow: 0, marginTop: spacing.xs },
+  items: { flex: 1, minHeight: 0, marginTop: spacing.xs },
   itemsContent: { paddingBottom: spacing.sm },
   empty: { paddingVertical: spacing.xl, color: colors.inkMuted, fontSize: 13, textAlign: 'center' },
   totals: { paddingTop: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
