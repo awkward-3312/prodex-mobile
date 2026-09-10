@@ -3,6 +3,7 @@
     "name": "prodex-mobile",
     "slug": "prodex-mobile",
     "version": "1.0.0",
+    "scheme": "prodex",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,6 +21,10 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ]
   }
 }

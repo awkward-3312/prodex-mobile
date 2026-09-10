@@ -1,0 +1,64 @@
+export const colors = {
+  brand: '#0D8B68',
+  brandDark: '#08634C',
+  brandSoft: '#DDF5EC',
+  ink: '#17324D',
+  inkMuted: '#66788A',
+  canvas: '#F6F8F7',
+  surface: '#FFFFFF',
+  line: '#E5EBE8',
+  blue: '#2574D8',
+  blueSoft: '#E7F0FF',
+  teal: '#0FA7A0',
+  tealSoft: '#DFF7F4',
+  amber: '#D98E04',
+  amberSoft: '#FFF3D6',
+  red: '#C94C4C',
+  redSoft: '#FCE7E7',
+  purple: '#7758C7',
+  purpleSoft: '#F0EBFF',
+  white: '#FFFFFF',
+} as const;
+
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+} as const;
+
+export const radii = {
+  sm: 10,
+  md: 16,
+  lg: 22,
+  pill: 999,
+} as const;
+
+export const typography = {
+  display: 28,
+  title: 21,
+  subtitle: 16,
+  body: 14,
+  caption: 12,
+  metric: 24,
+} as const;
+
+export const shadows = {
+  card: {
+    shadowColor: '#17324D',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.07,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+} as const;
+
+export const semantic = {
+  positive: colors.brand,
+  info: colors.blue,
+  inventory: colors.teal,
+  warning: colors.amber,
+  critical: colors.red,
+} as const;
