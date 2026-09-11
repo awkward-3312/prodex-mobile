@@ -1,45 +1,239 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FadeInView } from '../../src/components/motion';
+import { CategoryChip } from '../../src/components/pos/CategoryChip';
+import { SaleRow } from '../../src/components/sales/SaleRow';
 import { AppHeader } from '../../src/components/ui/AppHeader';
 import { EmptyState } from '../../src/components/ui/EmptyState';
-import { colors, radii, spacing, surfaces, typography } from '../../src/theme';
+import { useAuth } from '../../src/context/AuthContext';
+import { getMobileSales, mergeMobileSalesPages, mobileSaleKey, MobileSalesError } from '../../src/services/sales/mobileSalesService';
+import { colors, fontWeights, spacing, surfaces, typography } from '../../src/theme';
+import type { MobileSale, MobileSalePagination, MobileSalePaymentStatus } from '../../src/types/mobileSales';
+
+const PER_PAGE = 30;
+
+const STATUS_FILTERS: { id: MobileSalePaymentStatus | null; label: string }[] = [
+  { id: null, label: 'Todas' },
+  { id: 'paid', label: 'Pagadas' },
+  { id: 'partial', label: 'Parciales' },
+  { id: 'unpaid', label: 'Pendientes' },
+];
+
+function salesErrorMessage(error: MobileSalesError) {
+  if (error.status === 'forbidden') return 'No tienes acceso al historial de ventas.';
+  if (error.status === 'validation_error') return 'PRODEX no pudo validar la solicitud.';
+  if (error.status === 'rate_limited') return 'PRODEX recibió muchas solicitudes. Intenta de nuevo en un momento.';
+  if (error.status === 'server_error') return 'PRODEX no está disponible en este momento.';
+  if (error.status === 'timeout' || error.status === 'network_error') return 'No pudimos cargar las ventas.';
+  return 'No pudimos cargar las ventas.';
+}
 
 export default function SalesScreen() {
+  const insets = useSafeAreaInsets();
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState<MobileSalePaymentStatus | null>(null);
+  const [sales, setSales] = useState<MobileSale[]>([]);
+  const [pagination, setPagination] = useState<MobileSalePagination | null>(null);
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const requestSeq = useRef(0);
+  const mounted = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
+  const loadingMoreRef = useRef(false);
+  const salesRef = useRef<MobileSale[]>([]);
+  const { session, signOut } = useAuth();
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      abortRef.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    salesRef.current = sales;
+  }, [sales]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  const hasActiveFilters = debouncedSearch.length > 0 || paymentStatus !== null;
+
+  const loadSales = useCallback(async ({ page, mode }: { page: number; mode: 'replace' | 'append' | 'refresh' }) => {
+    if (!session?.baseUrl || !session.accessToken) return;
+
+    const seq = requestSeq.current + 1;
+    requestSeq.current = seq;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    if (mode === 'append') {
+      if (loadingMoreRef.current) return;
+      loadingMoreRef.current = true;
+      setLoadingMore(true);
+    } else {
+      loadingMoreRef.current = false;
+      if (mode === 'refresh') setRefreshing(true);
+      else {
+        setLoadingSearch(salesRef.current.length > 0);
+        setLoadingInitial(salesRef.current.length === 0);
+      }
+    }
+
+    try {
+      const response = await getMobileSales({
+        baseUrl: session.baseUrl,
+        accessToken: session.accessToken,
+        search: debouncedSearch,
+        paymentStatus,
+        page,
+        perPage: PER_PAGE,
+        signal: controller.signal,
+      });
+      if (!mounted.current || requestSeq.current !== seq) return;
+
+      setErrorMessage(null);
+      setPagination(response.pagination);
+      setSales((current) => (mode === 'append' ? mergeMobileSalesPages(current, response.items) : response.items));
+    } catch (error) {
+      if (!mounted.current || requestSeq.current !== seq) return;
+      if (error instanceof MobileSalesError && error.status === 'session_expired') {
+        await signOut();
+        return;
+      }
+      setErrorMessage(error instanceof MobileSalesError ? salesErrorMessage(error) : 'No pudimos cargar las ventas.');
+      if (mode !== 'append') setSales([]);
+    } finally {
+      if (mode === 'append') loadingMoreRef.current = false;
+      if (!mounted.current || requestSeq.current !== seq) return;
+      setLoadingInitial(false);
+      setLoadingSearch(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  }, [debouncedSearch, paymentStatus, session?.accessToken, session?.baseUrl, signOut]);
+
+  useEffect(() => {
+    setPagination(null);
+    setErrorMessage(null);
+    void loadSales({ page: 1, mode: 'replace' });
+  }, [debouncedSearch, paymentStatus, loadSales]);
+
+  const handleRetry = () => {
+    void loadSales({ page: 1, mode: 'replace' });
+  };
+
+  const handleRefresh = () => {
+    void loadSales({ page: 1, mode: 'refresh' });
+  };
+
+  const handleEndReached = () => {
+    if (loadingInitial || loadingMore || loadingMoreRef.current || refreshing || !pagination?.has_more) return;
+    void loadSales({ page: pagination.page + 1, mode: 'append' });
+  };
+
+  const clearFilters = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setPaymentStatus(null);
+  };
+
+  const renderRow = useCallback(({ item }: { item: MobileSale }) => <SaleRow sale={item} />, []);
+
+  const renderHeader = () => (
+    <FadeInView distance={6}>
+      <AppHeader title="Ventas" subtitle="Historial y estados de cobro" icon="receipt-outline" />
+
+      <View style={styles.searchBox}>
+        <Ionicons name="search-outline" size={19} color={colors.inkMuted} />
+        <TextInput
+          accessibilityLabel="Buscar venta por referencia o cliente"
+          placeholder="Buscar por referencia o cliente"
+          placeholderTextColor={colors.inkMuted}
+          value={search}
+          onChangeText={setSearch}
+          style={styles.searchInput}
+          returnKeyType="search"
+        />
+        {search.length > 0 && (
+          <Pressable accessibilityLabel="Limpiar búsqueda" accessibilityRole="button" onPress={() => setSearch('')} style={styles.clear}>
+            <Ionicons name="close-circle" size={18} color={colors.inkMuted} />
+          </Pressable>
+        )}
+      </View>
+
+      <View style={styles.filtersRow}>
+        {STATUS_FILTERS.map((filter) => (
+          <CategoryChip key={filter.label} label={filter.label} selected={paymentStatus === filter.id} onPress={() => setPaymentStatus(filter.id)} />
+        ))}
+      </View>
+
+      <View style={styles.titleRow}>
+        <Text style={styles.sectionTitle}>Ventas recientes</Text>
+        {loadingSearch && <ActivityIndicator size="small" color={colors.brand} />}
+      </View>
+    </FadeInView>
+  );
+
+  const renderEmpty = () => {
+    if (loadingInitial) {
+      return (
+        <View style={styles.emptyState}>
+          <ActivityIndicator color={colors.brand} />
+          <Text style={styles.emptyStateText}>Cargando ventas...</Text>
+        </View>
+      );
+    }
+    if (errorMessage) {
+      return <EmptyState icon="cloud-offline-outline" title={errorMessage} actionLabel="Reintentar" onAction={handleRetry} compact />;
+    }
+    if (hasActiveFilters) {
+      return <EmptyState icon="search-outline" title="No encontramos ventas con estos filtros." actionLabel="Limpiar filtros" onAction={clearFilters} compact />;
+    }
+    return <EmptyState icon="receipt-outline" title="Aún no hay ventas registradas." compact />;
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <AppHeader title="Ventas" subtitle="Historial y estados de cobro" icon="receipt-outline" />
-        <View style={styles.heroCard}>
-          <View>
-            <Text style={styles.heroLabel}>Total reciente</Text>
-            <Text style={styles.heroValue}>--</Text>
-          </View>
-          <View style={styles.heroIcon}><Ionicons name="analytics-outline" size={22} color={colors.brand} /></View>
-        </View>
-        <View style={styles.filterRow}>
-          {['Todas', 'Pagadas', 'Pendientes'].map((label, index) => <View key={label} style={[styles.filter, index === 0 && styles.filterActive]}><Text style={[styles.filterText, index === 0 && styles.filterTextActive]}>{label}</Text></View>)}
-        </View>
-        <Text style={styles.sectionTitle}>Ventas recientes</Text>
-        <View style={styles.listCard}><EmptyState icon="receipt-outline" title="Ventas pendientes de integración" message="La estructura visual está lista para conectar el historial real más adelante." compact /></View>
-      </ScrollView>
+      <FlatList
+        data={sales}
+        keyExtractor={mobileSaleKey}
+        renderItem={renderRow}
+        ListHeaderComponent={renderHeader()}
+        ListEmptyComponent={renderEmpty()}
+        ListFooterComponent={loadingMore ? <View style={styles.footerSpinner}><ActivityIndicator color={colors.brand} /></View> : null}
+        contentContainerStyle={[styles.content, { paddingBottom: spacing.xxl + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.35}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
-  heroCard: { ...surfaces.card, minHeight: 98, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, backgroundColor: colors.brandSoft, borderColor: colors.brandSoft },
-  heroLabel: { color: colors.inkMuted, fontSize: typography.caption, fontWeight: '800' },
-  heroValue: { marginTop: spacing.xs, color: colors.ink, fontSize: 25, fontWeight: '800' },
-  heroIcon: { width: 44, height: 44, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
-  filterRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  filter: { minHeight: 38, paddingHorizontal: spacing.md, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
-  filterActive: { backgroundColor: colors.brand, borderColor: colors.brand },
-  filterText: { color: colors.inkMuted, fontSize: typography.caption, fontWeight: '800' },
-  filterTextActive: { color: colors.white },
-  sectionTitle: { marginTop: spacing.xl, marginBottom: spacing.sm, color: colors.ink, fontSize: typography.subtitle, fontWeight: '800' },
-  listCard: { ...surfaces.card, overflow: 'hidden' },
+  content: { paddingHorizontal: spacing.lg },
+  searchBox: { ...surfaces.input, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, marginTop: spacing.lg },
+  searchInput: { flex: 1, minHeight: 44, color: colors.ink, fontSize: typography.body },
+  clear: { width: 32, height: 44, alignItems: 'center', justifyContent: 'center' },
+  filtersRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
+  titleRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md, marginBottom: spacing.xs },
+  sectionTitle: { color: colors.ink, fontSize: 16, fontWeight: fontWeights.bold },
+  footerSpinner: { paddingVertical: spacing.lg },
+  emptyState: { alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
+  emptyStateText: { marginTop: spacing.sm, color: colors.inkMuted, fontSize: 12, textAlign: 'center' },
 });
