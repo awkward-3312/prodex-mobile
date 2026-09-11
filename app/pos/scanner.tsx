@@ -7,9 +7,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { appConfig } from '../../src/config/app';
-import { findProductByBarcode } from '../../src/services/pos/productBarcodeService';
 import { usePosCart } from '../../src/context/PosCartContext';
 import { colors, radii, spacing, typography } from '../../src/theme';
+import { resolveProductByCode } from '../../src/services/pos/productBarcodeService';
 
 const barcodeTypes: BarcodeType[] = ['code128', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code39'];
 
@@ -26,12 +26,12 @@ export default function ScannerScreen() {
     if (permission && !permission.granted && permission.canAskAgain) requestPermission();
   }, [permission, requestPermission]);
 
-  const processBarcode = (rawValue: string) => {
+  const processBarcode = (rawValue: string, rawType: string) => {
     if (scanLock.current) return;
     scanLock.current = true;
     setIsProcessingScan(true);
 
-    const result = findProductByBarcode(rawValue, items);
+    const result = resolveProductByCode({ code: rawValue, symbology: rawType }, items);
     if (result.status === 'found') {
       addProduct(result.product);
       setFeedback({ title: `${result.product.name} agregado`, tone: 'info' });
@@ -60,7 +60,7 @@ export default function ScannerScreen() {
     return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><View style={styles.center}><Text style={styles.title}>Acceso a la cámara</Text><Text style={styles.description}>PRODEX necesita acceso a la cámara para escanear códigos de barras de productos.</Text><Pressable accessibilityLabel="Permitir acceso a la cámara" accessibilityRole="button" onPress={requestPermission} style={styles.primary}><Text style={styles.primaryText}>Reintentar permiso</Text></Pressable>{!permission.canAskAgain && <Pressable accessibilityLabel="Abrir configuración de cámara" accessibilityRole="button" onPress={() => Linking.openSettings()} style={styles.secondary}><Text style={styles.secondaryText}>Abrir configuración</Text></Pressable>}<Pressable accessibilityLabel="Volver al POS" accessibilityRole="button" onPress={() => router.back()} style={styles.closeText}><Text style={styles.closeTextLabel}>Volver al POS</Text></Pressable></View></SafeAreaView>;
   }
 
-  return <View style={styles.cameraScreen}><CameraView facing="back" enableTorch={torchEnabled} onMountError={() => setCameraError(true)} onBarcodeScanned={isProcessingScan ? undefined : ({ data }) => processBarcode(data)} barcodeScannerSettings={{ barcodeTypes }} style={StyleSheet.absoluteFill} /><SafeAreaView style={styles.overlay} edges={['top', 'bottom']}><View style={styles.topBar}><Pressable accessibilityLabel="Cerrar escáner" accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}><Text style={styles.backGlyph}>‹</Text></Pressable><View><Text style={styles.cameraTitle}>Escanear producto</Text><Text style={styles.location}>{appConfig.activeLocation}</Text></View><View style={styles.topSpacer} /></View><View style={styles.scannerArea}><View style={styles.frame}><View style={[styles.corner, styles.cornerTopLeft]} /><View style={[styles.corner, styles.cornerTopRight]} /><View style={[styles.corner, styles.cornerBottomLeft]} /><View style={[styles.corner, styles.cornerBottomRight]} /></View><Text style={styles.instruction}>Coloca el código de barras dentro del marco</Text></View><View style={styles.bottomControls}>{cameraError && <Text style={styles.cameraError}>La cámara no está disponible.</Text>}{feedback && <View style={[styles.feedback, feedback.tone === 'error' && styles.feedbackError]}><Text style={styles.feedbackTitle}>{feedback.title}</Text>{feedback.detail && <Text style={styles.feedbackDetail}>{feedback.detail}</Text>}{feedback.tone === 'error' && <Pressable accessibilityLabel="Escanear nuevamente" accessibilityRole="button" onPress={retryScan} style={styles.retry}><Text style={styles.retryText}>Escanear nuevamente</Text></Pressable>}</View>}<Pressable accessibilityLabel={torchEnabled ? 'Apagar linterna' : 'Encender linterna'} accessibilityRole="button" onPress={() => setTorchEnabled((current) => !current)} style={styles.torch}><Text style={styles.torchText}>{torchEnabled ? 'Apagar linterna' : 'Linterna'}</Text></Pressable></View></SafeAreaView></View>;
+  return <View style={styles.cameraScreen}><CameraView facing="back" enableTorch={torchEnabled} onMountError={() => setCameraError(true)} onBarcodeScanned={isProcessingScan ? undefined : ({ data, type }) => processBarcode(data, type)} barcodeScannerSettings={{ barcodeTypes }} style={StyleSheet.absoluteFill} /><SafeAreaView style={styles.overlay} edges={['top', 'bottom']}><View style={styles.topBar}><Pressable accessibilityLabel="Cerrar escáner" accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}><Text style={styles.backGlyph}>‹</Text></Pressable><View><Text style={styles.cameraTitle}>Escanear producto</Text><Text style={styles.location}>{appConfig.activeLocation}</Text></View><View style={styles.topSpacer} /></View><View style={styles.scannerArea}><View style={styles.frame}><View style={[styles.corner, styles.cornerTopLeft]} /><View style={[styles.corner, styles.cornerTopRight]} /><View style={[styles.corner, styles.cornerBottomLeft]} /><View style={[styles.corner, styles.cornerBottomRight]} /></View><Text style={styles.instruction}>Coloca el código de barras dentro del marco</Text></View><View style={styles.bottomControls}>{cameraError && <Text style={styles.cameraError}>La cámara no está disponible.</Text>}{feedback && <View style={[styles.feedback, feedback.tone === 'error' && styles.feedbackError]}><Text style={styles.feedbackTitle}>{feedback.title}</Text>{feedback.detail && <Text style={styles.feedbackDetail}>{feedback.detail}</Text>}{feedback.tone === 'error' && <Pressable accessibilityLabel="Escanear nuevamente" accessibilityRole="button" onPress={retryScan} style={styles.retry}><Text style={styles.retryText}>Escanear nuevamente</Text></Pressable>}</View>}<Pressable accessibilityLabel={torchEnabled ? 'Apagar linterna' : 'Encender linterna'} accessibilityRole="button" onPress={() => setTorchEnabled((current) => !current)} style={styles.torch}><Text style={styles.torchText}>{torchEnabled ? 'Apagar linterna' : 'Linterna'}</Text></Pressable></View></SafeAreaView></View>;
 }
 
 const styles = StyleSheet.create({

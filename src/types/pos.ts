@@ -2,12 +2,14 @@ import type { Ionicons } from '@expo/vector-icons';
 
 export type ProductCategory = 'Bebidas' | 'Snacks' | 'Abarrotes';
 export type ProductStockStatus = 'Disponible' | 'Bajo stock' | 'Sin stock';
+export type BarcodeSymbology = 'CODE128' | 'CODE39' | 'EAN8' | 'EAN13' | 'UPC';
 
 export type PosProduct = {
   id: string;
   name: string;
   sku: string;
   barcode: string;
+  barcodeSymbology: BarcodeSymbology;
   category: ProductCategory;
   price: number;
   stock: number;

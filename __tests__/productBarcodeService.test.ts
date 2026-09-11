@@ -1,5 +1,5 @@
 import { posProducts } from '../src/config/posMockData';
-import { findProductByBarcode } from '../src/services/pos/productBarcodeService';
+import { findProductByBarcode, normalizeBarcodeSymbology, resolveProductByCode } from '../src/services/pos/productBarcodeService';
 import type { CartItem } from '../src/types/pos';
 
 const product = (id: string): CartItem => {
@@ -50,5 +50,29 @@ describe('findProductByBarcode', () => {
     if (!limited) throw new Error('Missing limited mock product');
     const result = findProductByBarcode(limited.barcode, [{ ...product('prod-5'), quantity: limited.stock }]);
     expect(result.status).toBe('stock_limit_reached');
+  });
+});
+
+describe('normalizeBarcodeSymbology', () => {
+  test.each([
+    ['code128', 'CODE128'],
+    ['code39', 'CODE39'],
+    ['ean8', 'EAN8'],
+    ['ean13', 'EAN13'],
+    ['upc_a', 'UPC'],
+    ['upc_e', 'UPC'],
+  ])('%s normalizes to %s', (input, expected) => {
+    expect(normalizeBarcodeSymbology(input)).toBe(expected);
+  });
+
+  it('handles unsupported types safely', () => {
+    expect(normalizeBarcodeSymbology('qr')).toBeNull();
+    expect(resolveProductByCode({ code: '7501000000012', symbology: 'qr' }).status).toBe('not_found');
+  });
+
+  it('resolves the exact code independently of SKU', () => {
+    const result = resolveProductByCode({ code: '7501000000012', symbology: 'ean13' });
+    expect(result.status).toBe('found');
+    expect(resolveProductByCode({ code: 'CAF-500-001', symbology: 'code128' }).status).toBe('not_found');
   });
 });
