@@ -4,10 +4,9 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { QuickAction } from '../../src/components/QuickAction';
-import { EmptyState } from '../../src/components/ui/EmptyState';
 import { AppHeader } from '../../src/components/ui/AppHeader';
 import { useAuth } from '../../src/context/AuthContext';
-import { colors, fontWeights, radii, spacing, surfaces, typography } from '../../src/theme';
+import { colors, fontWeights, radii, spacing, typography } from '../../src/theme';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object';
@@ -37,15 +36,12 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Resumen del negocio</Text>
-        <View style={styles.summaryCard}>
-          <EmptyState icon="bar-chart-outline" title="Panel de ventas en camino" message="Cuando conectemos tus datos reales de ventas, utilidad e inventario, los verás aquí." compact />
-        </View>
-
         <Text style={styles.actionsTitle}>Accesos rápidos</Text>
-        <View style={styles.actionsRow}>
+        <View style={styles.actionsGrid}>
           <QuickAction label="Nueva venta" icon="cart-outline" color={colors.brand} backgroundColor={colors.brandSoft} onPress={() => router.push('/(tabs)/pos')} />
           <QuickAction label="Escanear código" icon="scan-outline" color={colors.blue} backgroundColor={colors.blueSoft} onPress={() => router.push('/pos/scanner')} />
+          <QuickAction label="Inventario" icon="cube-outline" color={colors.teal} backgroundColor={colors.tealSoft} onPress={() => router.push('/(tabs)/inventory')} />
+          <QuickAction label="Ventas" icon="receipt-outline" color={colors.amber} backgroundColor={colors.amberSoft} onPress={() => router.push('/(tabs)/sales')} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -59,8 +55,6 @@ const styles = StyleSheet.create({
   locationCopy: { flex: 1, minWidth: 0 },
   company: { color: colors.ink, fontSize: 13, fontWeight: fontWeights.bold, lineHeight: 18 },
   location: { marginTop: 2, color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.medium, lineHeight: 16 },
-  sectionTitle: { marginTop: spacing.xl, marginBottom: spacing.md, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
-  summaryCard: { ...surfaces.card, overflow: 'hidden' },
   actionsTitle: { marginTop: spacing.xl, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
-  actionsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
+  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.md },
 });

@@ -230,7 +230,7 @@ export default function PosScreen() {
 
   const renderHeader = () => (
     <FadeInView distance={6}>
-      <PosHeader onOptionsPress={() => showMessage('Opciones del POS estarán disponibles próximamente.')} />
+      <PosHeader />
       <PosSearchBar value={search} onChangeText={setSearch} onScanPress={() => router.push('/pos/scanner')} />
       <FlatList
         horizontal
