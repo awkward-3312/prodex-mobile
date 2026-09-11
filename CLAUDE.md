@@ -127,10 +127,10 @@ git diff --check
 
 Expected current baseline:
 
-- 8 test suites
-- 133 tests
+- 9 test suites
+- 136 tests
 - TypeScript passing
-- expo-doctor 18/18
+- expo-doctor 21/21
 - web export passing
 
 Do not claim a task is finished if relevant validation fails.
