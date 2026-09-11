@@ -1,3 +1,4 @@
+import { UserAvatar } from '../../src/components/ui/UserAvatar';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -26,7 +27,7 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <AppHeader title="Inicio" subtitle={greeting} />
+        <AppHeader title="Inicio" subtitle={greeting} trailing={<UserAvatar />} />
 
         <View style={styles.locationRow}>
           <Ionicons name="business-outline" size={16} color={colors.ink} />

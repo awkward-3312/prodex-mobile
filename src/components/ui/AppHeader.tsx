@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -5,6 +6,7 @@ import { PressableScale } from '../motion';
 import { colors, fontWeights, radii, sizing, spacing, typography } from '../../theme';
 
 type Props = {
+  trailing?: ReactNode;
   title: string;
   subtitle?: string;
   icon?: keyof typeof Ionicons.glyphMap;
@@ -17,7 +19,7 @@ type Props = {
   };
 };
 
-export function AppHeader({ title, subtitle, icon, onBack, action }: Props) {
+export function AppHeader({ title, subtitle, icon, onBack, action, trailing }: Props) {
   return (
     <View style={styles.header}>
       {onBack ? (
@@ -31,6 +33,7 @@ export function AppHeader({ title, subtitle, icon, onBack, action }: Props) {
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
       </View>
+      {trailing}
       {action ? (
         <PressableScale accessibilityLabel={action.label} accessibilityRole="button" onPress={action.onPress} style={[styles.iconButton, action.tone === 'warning' && styles.warning]}>
           <Ionicons name={action.icon} size={21} color={action.tone === 'warning' ? colors.amber : colors.inkMuted} />
@@ -41,9 +44,9 @@ export function AppHeader({ title, subtitle, icon, onBack, action }: Props) {
 }
 
 const styles = StyleSheet.create({
-  header: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  header: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   copy: { flex: 1, minWidth: 0 },
-  title: { color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold, lineHeight: 26 },
+  title: { color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold, lineHeight: 30 },
   subtitle: { marginTop: 2, color: colors.inkMuted, fontSize: typography.caption, fontWeight: fontWeights.medium, lineHeight: 16 },
   iconButton: { width: sizing.iconButton, height: sizing.iconButton, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   iconBadge: { width: sizing.iconButton, height: sizing.iconButton, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },

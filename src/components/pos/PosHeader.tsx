@@ -1,3 +1,4 @@
+import { UserAvatar } from '../ui/UserAvatar';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -26,14 +27,15 @@ export function PosHeader() {
         <Text style={styles.title}>Punto de venta</Text>
         <View style={styles.location}><Ionicons name="business-outline" size={14} color={colors.brand} /><Text style={styles.locationText} numberOfLines={1}>{locationLabel(operationalContext)}</Text></View>
       </View>
+      <UserAvatar />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: spacing.md, paddingBottom: spacing.sm },
-  copy: { flex: 1 },
-  title: { color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold },
-  location: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
-  locationText: { color: colors.inkMuted, fontSize: typography.caption, fontWeight: fontWeights.semibold },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 76, gap: spacing.md, paddingVertical: spacing.sm },
+  copy: { flex: 1, minWidth: 0 },
+  title: { color: colors.ink, fontSize: typography.title, lineHeight: 30, fontWeight: fontWeights.bold },
+  location: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },
+  locationText: { flexShrink: 1, color: colors.inkMuted, fontSize: typography.caption, lineHeight: 16, fontWeight: fontWeights.medium },
 });

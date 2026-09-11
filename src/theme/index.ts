@@ -67,6 +67,7 @@ export const shadows = {
 } as const;
 
 export const sizing = {
+  headerAvatar: 46,
   touch: 44,
   input: 48,
   button: 48,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FadeInView, PressableScale } from '../../src/components/motion';
@@ -40,6 +40,9 @@ function emptyMessage(search: string, categoryId: SelectedCategory) {
 }
 
 export default function PosScreen() {
+  const { width: windowWidth } = useWindowDimensions();
+  const [layoutWidth, setLayoutWidth] = useState(windowWidth);
+  const cardWidth = Math.max(0, (layoutWidth - spacing.lg * 2 - spacing.md) / 2);
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -225,8 +228,8 @@ export default function PosScreen() {
   }, [cartVisible]);
 
   const renderProduct = useCallback(({ item }: { item: PosProduct }) => (
-    <View style={styles.productSlot}><ProductCard product={item} onPress={() => handleAddProduct(item)} style={styles.productCard} /></View>
-  ), [handleAddProduct]);
+    <View style={[styles.productSlot, { width: cardWidth }]}><ProductCard product={item} onPress={() => handleAddProduct(item)} style={styles.productCard} /></View>
+  ), [cardWidth, handleAddProduct]);
 
   const renderHeader = () => (
     <FadeInView distance={6}>
@@ -256,6 +259,7 @@ export default function PosScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <FlatList
+        onLayout={({ nativeEvent }) => setLayoutWidth(nativeEvent.layout.width)}
         data={products}
         keyExtractor={(item) => item.id}
         numColumns={2}
@@ -284,8 +288,8 @@ const styles = StyleSheet.create({
   categories: { gap: spacing.sm, paddingTop: spacing.sm, paddingBottom: spacing.xs },
   titleRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md, marginBottom: spacing.sm },
   productsTitle: { color: colors.ink, fontSize: 16, fontWeight: fontWeights.bold },
-  productRow: { justifyContent: 'space-between', marginBottom: spacing.md },
-  productSlot: { width: '48%' },
+  productRow: { columnGap: spacing.md, alignItems: 'stretch', marginBottom: spacing.md },
+  productSlot: { minWidth: 0 },
   productCard: { width: '100%' },
   footerSpinner: { paddingVertical: spacing.lg },
   snackbarWrap: { position: 'absolute', left: spacing.md, right: spacing.md, zIndex: 20 },
