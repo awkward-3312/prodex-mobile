@@ -1,4 +1,10 @@
-import { createContext, useContext, useReducer } from 'react';
+import { randomUUID } from 'expo-crypto';
+import { useAuth } from './AuthContext';
+import { SaleSubmissionController } from '../services/sales/saleSubmissionController';
+import type { SubmissionState } from '../services/sales/saleSubmissionController';
+import { saleAttemptStorage } from '../services/sales/saleAttemptStorage';
+import { submitMobileSale } from '../services/sales/mobileSaleSubmissionService';
+import { createContext, useContext, useReducer, useMemo, useRef, useEffect, useState, useSyncExternalStore } from 'react';
 
 import type { CartItem, PosProduct } from '../types/pos';
 import { toMinorUnits } from '../utils/formatCurrency';
@@ -10,6 +16,7 @@ type CartAction =
   | { type: 'increase'; productId: string }
   | { type: 'decrease'; productId: string }
   | { type: 'remove'; productId: string }
+  | { type: 'restore'; items: CartItem[] }
   | { type: 'clear' };
 
 const initialState: CartState = { items: [] };
@@ -41,6 +48,8 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       return { items: state.items.flatMap((item) => item.product.id === action.productId ? (item.quantity > 1 ? [{ ...item, quantity: item.quantity - 1 }] : []) : [item]) };
     case 'remove':
       return { items: state.items.filter((item) => item.product.id !== action.productId) };
+    case 'restore':
+      return { items: action.items };
     case 'clear':
       return initialState;
     default:
@@ -49,6 +58,10 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 }
 
 type PosCartValue = {
+  saleSubmission: SaleSubmissionController;
+  submission: SubmissionState;
+  cartLocked: boolean;
+  salesRevision: number;
   items: CartItem[];
   itemCount: number;
   subtotalCents: number;
@@ -66,22 +79,68 @@ const PosCartContext = createContext<PosCartValue | null>(null);
 
 export function PosCartProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
-  const subtotalCents = getCartSubtotal(state.items);
+  const { session, user } = useAuth();
+  const operator = user?.id ?? user?.email;
+  const owner = session && operator != null ? `${session.baseUrl.replace(/\/$/, '')}|${String(operator)}` : '';
+  const ownerRef = useRef(owner);
+  ownerRef.current = owner;
+  const cartOwner = useRef('');
+  const carts = useRef(new Map<string, CartItem[]>());
+  const [salesRevision, setSalesRevision] = useState(0);
+  const controllers = useRef(new Map<string, SaleSubmissionController>());
+  const saleSubmission = useMemo(() => {
+    const existing = controllers.current.get(owner);
+    if (existing) return existing;
+    const controller = new SaleSubmissionController({
+      owner,
+      uuid: randomUUID,
+      storage: owner ? saleAttemptStorage(owner) : { read: async () => null, write: async () => {}, remove: async () => {} },
+      send: (request, accessToken) => submitMobileSale({ baseUrl: session?.baseUrl ?? '', accessToken, request }),
+      confirmed: () => {
+        carts.current.set(owner, []);
+        if (ownerRef.current !== owner) return;
+        dispatch({ type: 'clear' });
+        setSalesRevision(value => value + 1);
+      },
+    });
+    controllers.current.set(owner, controller);
+    return controller;
+  }, [owner, session?.baseUrl]);
+  const submission = useSyncExternalStore(saleSubmission.subscribe, saleSubmission.getSnapshot, saleSubmission.getSnapshot);
+  useEffect(() => {
+    if (cartOwner.current !== owner) {
+      carts.current.set(cartOwner.current, state.items);
+      cartOwner.current = owner;
+      dispatch({ type: 'restore', items: carts.current.get(owner) ?? [] });
+    }
+    void saleSubmission.restore();
+  }, [owner, saleSubmission]);
+  const guardedDispatch = (action: CartAction) => {
+    if (!owner || saleSubmission.isLocked()) return;
+    if (action.type === 'clear') saleSubmission.resetDraft();
+    dispatch(action);
+  };
+  const visibleItems = cartOwner.current === owner ? state.items : carts.current.get(owner) ?? [];
+  useEffect(() => {
+    if (visibleItems.length === 0) saleSubmission.resetDraft();
+  }, [visibleItems.length, saleSubmission]);
+  const subtotalCents = getCartSubtotal(visibleItems);
   const discountCents = 0;
   const taxCents = 0;
 
   const value: PosCartValue = {
-    items: state.items,
-    itemCount: getCartItemCount(state.items),
+    saleSubmission, submission, cartLocked: !owner || saleSubmission.isLocked(), salesRevision,
+    items: visibleItems,
+    itemCount: getCartItemCount(visibleItems),
     subtotalCents,
     discountCents,
     taxCents,
     totalCents: subtotalCents - discountCents,
-    addProduct: (product, quantity = 1) => dispatch({ type: 'add', product, quantity }),
-    increase: (productId) => dispatch({ type: 'increase', productId }),
-    decrease: (productId) => dispatch({ type: 'decrease', productId }),
-    remove: (productId) => dispatch({ type: 'remove', productId }),
-    clearCart: () => dispatch({ type: 'clear' }),
+    addProduct: (product, quantity = 1) => guardedDispatch({ type: 'add', product, quantity }),
+    increase: (productId) => guardedDispatch({ type: 'increase', productId }),
+    decrease: (productId) => guardedDispatch({ type: 'decrease', productId }),
+    remove: (productId) => guardedDispatch({ type: 'remove', productId }),
+    clearCart: () => guardedDispatch({ type: 'clear' }),
   };
 
   return <PosCartContext.Provider value={value}>{children}</PosCartContext.Provider>;

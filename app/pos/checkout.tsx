@@ -1,3 +1,6 @@
+import { SaleConfirmation } from '../../src/components/pos/payment/SaleConfirmation';
+import type { SalePreflightRequest } from '../../src/types/mobilePosSalePreflight';
+import { saleSubmissionMessage } from '../../src/services/sales/mobileSaleSubmissionService';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -57,7 +60,7 @@ function friendlyPreflightError(error: PreflightError) {
   if (error.code === 'invalid_account') return 'Selecciona una cuenta válida para el método de pago.';
   if (error.code === 'payment_total_invalid') return 'El total pagado no coincide con el total validado.';
   if (error.code === 'invalid_operational_context') return 'El contexto operativo no permite completar esta venta.';
-  return error.message;
+  return saleSubmissionMessage(error.code);
 }
 
 export default function CheckoutScreen() {
@@ -78,6 +81,7 @@ export default function CheckoutScreen() {
   const [paymentInputs, setPaymentInputs] = useState<Record<string, string>>({});
   const [accountSelections, setAccountSelections] = useState<Record<string, string | number | null>>({});
   const [preflight, setPreflight] = useState<SalePreflightResponse | null>(null);
+  const [preflightIntent, setPreflightIntent] = useState<SalePreflightRequest | null>(null);
   const [preflightKey, setPreflightKey] = useState('');
   const [preflightError, setPreflightError] = useState<string | null>(null);
   const [preflightErrorKey, setPreflightErrorKey] = useState('');
@@ -91,12 +95,14 @@ export default function CheckoutScreen() {
   const selectedMethod = useMemo(() => availableMethods.find((method) => method.id === selection) ?? null, [availableMethods, selection]);
   const currency = context?.currency;
   const currentPreflightKey = useMemo(() => JSON.stringify({
+    owner: `${session?.baseUrl ?? ''}|${session?.accessToken ?? ''}`,
+    context: context?.operational_context,
     customer: selectedCustomer?.id ?? null,
     selection,
     lines: cart.items.map((item) => ({ id: item.product.id, productId: item.product.productId ?? null, variantId: item.product.productVariantId ?? null, quantity: item.quantity })),
     paymentInputs,
     accountSelections,
-  }), [accountSelections, cart.items, paymentInputs, selectedCustomer?.id, selection]);
+  }), [accountSelections, cart.items, context?.operational_context, paymentInputs, selectedCustomer?.id, selection, session?.baseUrl, session?.accessToken]);
   const activePreflight = preflightKey === currentPreflightKey ? preflight : null;
   const activePreflightError = preflightErrorKey === currentPreflightKey ? preflightError : null;
   const preflightStatus = activePreflight?.can_submit ? 'validated' : preflightLoading ? 'loading' : 'pending';
@@ -104,7 +110,7 @@ export default function CheckoutScreen() {
   const displayTotalCents = fiscalSummary?.totalCents ?? cart.totalCents;
   const cashInput = selectedMethod ? paymentInputs[String(selectedMethod.id)] ?? '' : '';
   const cashCents = parseMinorUnits(cashInput);
-  const backendChangeCents = preflight ? parseMinorUnits(preflight.payments.change) : null;
+  const backendChangeCents = activePreflight ? parseMinorUnits(activePreflight.payments.change) : null;
   const cashChangeCents = backendChangeCents ?? Math.max(0, cashCents - displayTotalCents);
   const cashShortfallCents = Math.max(0, displayTotalCents - cashCents);
   const quickAmounts = Array.from(new Set([displayTotalCents, 10000, 50000, 100000])).filter((amount) => amount >= displayTotalCents).slice(0, 3).map((amount) => ({ cents: amount, label: amount === displayTotalCents ? 'Exacto' : money(amount, currency).replace('.00', '') }));
@@ -176,10 +182,12 @@ export default function CheckoutScreen() {
     preflightAbortRef.current?.abort();
     preflightSeq.current += 1;
     setPreflight(null);
+    setPreflightIntent(null);
+    setPreflightLoading(false);
     setPreflightKey('');
     setPreflightError(null);
     setPreflightErrorKey('');
-  }, [cart.items, selectedCustomer?.id, selection, paymentInputs, accountSelections]);
+  }, [currentPreflightKey]);
 
   const updatePaymentInput = (id: string | number, value: string) => setPaymentInputs((current) => ({ ...current, [String(id)]: value }));
   const updateAccount = (id: string | number, value: string | number | null) => setAccountSelections((current) => ({ ...current, [String(id)]: value }));
@@ -214,7 +222,7 @@ export default function CheckoutScreen() {
   }, [accountSelections, availableMethods, cart.items.length, context, paymentInputs, selectedCustomer, selectedMethod, selection]);
 
   const submitPreflight = async () => {
-    if (!session?.baseUrl || !session.accessToken || !selectedCustomer || validationMessage) return;
+    if (!session?.baseUrl || !session.accessToken || !selectedCustomer || validationMessage || cart.saleSubmission.isLocked()) return;
     const seq = preflightSeq.current + 1;
     preflightSeq.current = seq;
     preflightAbortRef.current?.abort();
@@ -223,18 +231,16 @@ export default function CheckoutScreen() {
     setPreflightLoading(true);
     setPreflightError(null);
     try {
+      const request: SalePreflightRequest = { client_id: selectedCustomer.id, lines: cartItemsToPreflightLines(cart.items), payment_intent: buildPaymentIntent() };
       const response = await preflightSale({
         baseUrl: session.baseUrl,
         accessToken: session.accessToken,
         signal: controller.signal,
-        request: {
-          client_id: selectedCustomer.id,
-          lines: cartItemsToPreflightLines(cart.items),
-          payment_intent: buildPaymentIntent(),
-        },
+        request,
       });
       if (preflightSeq.current !== seq) return;
       setPreflight(response);
+      setPreflightIntent(request);
       setPreflightKey(currentPreflightKey);
       if (!response.can_submit) {
         setPreflightError(response.errors.map(friendlyPreflightError).join('\n') || 'PRODEX no pudo validar la venta.');
@@ -265,7 +271,7 @@ export default function CheckoutScreen() {
       return <FadeInView key={`cash-${String(selectedMethod.id)}`} distance={8}><CashPaymentForm totalCents={displayTotalCents} receivedInput={cashInput} receivedCents={cashCents} shortfallCents={cashShortfallCents} changeCents={cashChangeCents} quickAmounts={quickAmounts} currency={currency} onChange={(value) => updatePaymentInput(selectedMethod.id, value)} onQuickAmount={(amount) => updatePaymentInput(selectedMethod.id, centsToInput(amount))} />{renderAccountSelector(selectedMethod)}</FadeInView>;
     }
     const selectedMethodLabel = displayPaymentMethodName(selectedMethod);
-    return <FadeInView key={`single-${String(selectedMethod.id)}`} distance={8} style={styles.paymentBox}><Text style={styles.inputLabel}>Monto a aplicar</Text><TextInput accessibilityLabel={`Monto para ${selectedMethodLabel}`} keyboardType="decimal-pad" value={paymentInputs[String(selectedMethod.id)] ?? ''} onChangeText={(value) => updatePaymentInput(selectedMethod.id, value)} placeholder={centsToInput(displayTotalCents)} placeholderTextColor={colors.inkMuted} style={styles.input} /><Text style={styles.hint}>No ingreses datos de tarjeta ni referencias sensibles. Solo se validará el monto con PRODEX.</Text>{renderAccountSelector(selectedMethod)}</FadeInView>;
+    return <FadeInView key={`single-${String(selectedMethod.id)}`} distance={8} style={styles.paymentBox}><Text style={styles.inputLabel}>Monto a aplicar</Text><TextInput accessibilityLabel={`Monto para ${selectedMethodLabel}`} keyboardType="decimal-pad" value={paymentInputs[String(selectedMethod.id)] ?? ''} onChangeText={(value) => updatePaymentInput(selectedMethod.id, value)} placeholder={centsToInput(displayTotalCents)} placeholderTextColor={colors.inkMuted} style={styles.input} /><Text style={styles.hint}>No ingreses datos de tarjeta ni referencias sensibles. El monto será confirmado por PRODEX.</Text>{renderAccountSelector(selectedMethod)}</FadeInView>;
   };
 
   const renderMixedPaymentForm = () => (
@@ -274,6 +280,35 @@ export default function CheckoutScreen() {
       {availableMethods.map((method) => <View key={String(method.id)} style={styles.mixedLine}><Text style={styles.mixedLabel}>{displayPaymentMethodName(method)}</Text><TextInput accessibilityLabel={`Monto para ${displayPaymentMethodName(method)}`} keyboardType="decimal-pad" value={paymentInputs[String(method.id)] ?? ''} onChangeText={(value) => updatePaymentInput(method.id, value)} placeholder="0.00" placeholderTextColor={colors.inkMuted} style={styles.input} />{renderAccountSelector(method)}</View>)}
     </FadeInView>
   );
+
+  const confirmSale = async () => {
+    if (!session?.accessToken || !preflightIntent || validationMessage || !currency) return;
+    await cart.saleSubmission.start({ intent: preflightIntent, currentKey: currentPreflightKey, validatedKey: preflightKey, canSubmit: activePreflight?.can_submit === true, currency, token: session.accessToken });
+    if (cart.saleSubmission.getSnapshot().status === 'session_expired') await signOut();
+    if (cart.saleSubmission.getSnapshot().status === 'business_error') { setPreflight(null); setPreflightKey(''); }
+  };
+  const retrySale = async () => {
+    if (!session?.accessToken) return;
+    await cart.saleSubmission.retry(session.accessToken);
+    if (cart.saleSubmission.getSnapshot().status === 'session_expired') await signOut();
+  };
+  const leaveSuccess = async (destination: '/(tabs)/pos' | '/(tabs)/sales') => {
+    if (await cart.saleSubmission.finish()) router.replace(destination);
+  };
+  if (cart.submission.status === 'success' && cart.submission.attempt?.response) {
+    return <SaleConfirmation attempt={cart.submission.attempt} error={cart.submission.error?.message} onNewSale={() => { void leaveSuccess('/(tabs)/pos'); }} onSales={() => { void leaveSuccess('/(tabs)/sales'); }} />;
+  }
+  if (cart.cartLocked) {
+    const busy = cart.submission.status === 'submitting' || cart.submission.status === 'loading';
+    return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><ScrollView contentContainerStyle={styles.empty}>
+      {busy ? <ActivityIndicator size="large" color={colors.brand} /> : <Ionicons name="cloud-offline-outline" size={38} color={colors.amber} />}
+      <Text accessibilityRole="header" style={styles.emptyTitle}>{busy ? 'Confirmando venta' : 'Confirmación pendiente'}</Text>
+      <Text accessibilityLiveRegion="polite" style={styles.emptyText}>{busy ? 'Espera mientras comprobamos la confirmación.' : 'No pudimos confirmar la respuesta. Puedes reintentar de forma segura. Conservamos los datos de esta venta.'}</Text>
+      {cart.submission.error && cart.submission.error.message !== saleSubmissionMessage('network_error') ? <Text accessibilityRole="alert" style={styles.error}>{cart.submission.error.message}</Text> : null}
+      {!busy && <PressableScale accessibilityRole="button" onPress={retrySale} style={styles.primary}><Text style={styles.primaryText}>Reintentar confirmación</Text></PressableScale>}
+      <PressableScale accessibilityRole="button" onPress={() => router.replace('/(tabs)/pos')} style={styles.close}><Text style={styles.change}>Volver</Text></PressableScale>
+    </ScrollView></SafeAreaView>;
+  }
 
   if (cart.items.length === 0) {
     return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><FadeInView style={styles.empty}><Ionicons name="cart-outline" size={42} color={colors.inkMuted} /><Text style={styles.emptyTitle}>No hay una venta activa</Text><Text style={styles.emptyText}>Agrega productos desde el POS para comenzar.</Text><PressableScale accessibilityLabel="Volver al POS" accessibilityRole="button" onPress={() => router.replace('/(tabs)/pos')} style={styles.primary}><Text style={styles.primaryText}>Volver al POS</Text></PressableScale></FadeInView></SafeAreaView>;
@@ -300,6 +335,7 @@ export default function CheckoutScreen() {
           <View style={styles.methods}>{availableMethods.map((option) => <PaymentMethodCard key={String(option.id)} method={option} selected={selection === option.id} onPress={() => setSelection(option.id)} />)}{context?.capabilities.mixed_payments && <PaymentMethodCard method={{ id: 'mixed', name: 'Pago mixto', type: 'mixed', is_cash: false, is_card: false }} selected={selection === 'mixed'} onPress={() => setSelection('mixed')} />}</View>
           {selection === 'mixed' ? renderMixedPaymentForm() : renderSinglePaymentForm()}
 
+          {cart.submission.status === 'business_error' && cart.submission.error && <Text accessibilityRole="alert" style={styles.error}>{cart.submission.error.message}</Text>}
           {validationMessage && <FadeInView><Text style={styles.error}>{validationMessage}</Text></FadeInView>}
           {activePreflightError && <FadeInView style={styles.preflightErrors}>{activePreflightError.split('\n').map((line) => <Text key={line} style={styles.error}>{line}</Text>)}</FadeInView>}
           <FadeInView style={[styles.preflightStatus, preflightStatus === 'validated' && styles.validated]} distance={4} duration={motion.duration.fast}>
@@ -307,7 +343,7 @@ export default function CheckoutScreen() {
             <Text style={[styles.preflightStatusText, preflightStatus === 'validated' && styles.validatedText]}>{preflightStatus === 'validated' ? 'Venta validada por PRODEX. Aún no se ha confirmado el cobro.' : preflightStatus === 'loading' ? 'Validando venta con PRODEX...' : 'Pendiente de validación fiscal.'}</Text>
           </FadeInView>
 
-          <PressableScale accessibilityLabel={activePreflight?.can_submit ? 'Venta validada' : 'Revisar venta'} accessibilityRole="button" accessibilityState={{ disabled: !!validationMessage || preflightLoading || activePreflight?.can_submit === true }} disabled={!!validationMessage || preflightLoading || activePreflight?.can_submit === true} onPress={submitPreflight} scaleTo={motion.pressScalePrimary} style={[styles.confirm, (!!validationMessage || activePreflight?.can_submit) && styles.disabled]}><View style={styles.confirmContent}>{preflightLoading ? <ActivityIndicator size="small" color={colors.white} /> : null}<Text style={styles.confirmText}>{preflightLoading ? 'Revisando...' : activePreflight?.can_submit ? 'Venta validada' : 'Revisar venta'}</Text></View></PressableScale>
+          <PressableScale accessibilityLabel={activePreflight?.can_submit ? 'Confirmar venta' : 'Revisar venta'} accessibilityRole="button" accessibilityState={{ disabled: !!validationMessage || preflightLoading }} disabled={!!validationMessage || preflightLoading} onPress={activePreflight?.can_submit ? confirmSale : submitPreflight} scaleTo={motion.pressScalePrimary} style={[styles.confirm, !!validationMessage && styles.disabled]}><View style={styles.confirmContent}>{preflightLoading ? <ActivityIndicator size="small" color={colors.white} /> : null}<Text style={styles.confirmText}>{preflightLoading ? 'Revisando...' : activePreflight?.can_submit ? 'Confirmar venta' : 'Revisar venta'}</Text></View></PressableScale>
         </ScrollView>
       </KeyboardAvoidingView>
       <Modal visible={clientModalVisible} transparent animationType="fade" onRequestClose={() => setClientModalVisible(false)}>

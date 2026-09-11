@@ -1,3 +1,4 @@
+import { usePosCart } from '../../src/context/PosCartContext';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,6 +33,7 @@ function salesErrorMessage(error: MobileSalesError) {
 }
 
 export default function SalesScreen() {
+  const { salesRevision } = usePosCart();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -128,7 +130,7 @@ export default function SalesScreen() {
     setPagination(null);
     setErrorMessage(null);
     void loadSales({ page: 1, mode: 'replace' });
-  }, [debouncedSearch, paymentStatus, loadSales]);
+  }, [debouncedSearch, paymentStatus, loadSales, salesRevision]);
 
   const handleRetry = () => {
     void loadSales({ page: 1, mode: 'replace' });

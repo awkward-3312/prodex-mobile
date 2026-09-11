@@ -67,7 +67,7 @@ export default function PosScreen() {
   const categoriesRef = useRef<MobilePosCategory[]>([]);
   const previousLocationRef = useRef<string | number | null | undefined>(undefined);
   const { session, inventoryLocationId, signOut } = useAuth();
-  const { items: cartItems, itemCount, subtotalCents, discountCents, taxCents, totalCents, addProduct, increase, decrease, remove } = usePosCart();
+  const { items: cartItems, itemCount, subtotalCents, discountCents, taxCents, totalCents, cartLocked, submission, salesRevision, addProduct, increase, decrease, remove } = usePosCart();
 
   useEffect(() => {
     mounted.current = true;
@@ -182,7 +182,7 @@ export default function PosScreen() {
     setPagination(null);
     setErrorMessage(null);
     void loadCatalog({ page: 1, mode: 'replace' });
-  }, [categoryId, debouncedSearch, inventoryLocationId, loadCatalog]);
+  }, [categoryId, debouncedSearch, inventoryLocationId, loadCatalog, salesRevision]);
 
   const showMessage = useCallback((nextMessage: string) => {
     setMessage(nextMessage);
@@ -202,6 +202,7 @@ export default function PosScreen() {
   };
 
   const handleAddProduct = useCallback((product: PosProduct) => {
+    if (cartLocked) { router.push('/pos/checkout'); return; }
     if (product.canSell === false) {
       showMessage(product.sellabilityReason ?? 'Este producto no puede venderse.');
       return;
@@ -213,7 +214,7 @@ export default function PosScreen() {
     }
     addProduct(product);
     showMessage(`${product.name} agregado al carrito`);
-  }, [addProduct, cartItems, showMessage]);
+  }, [addProduct, cartItems, cartLocked, showMessage]);
 
   const handleCheckoutFromCart = useCallback(() => {
     const decision = decideCheckoutNavigation({ cartVisible, navigating: checkoutNavigatingRef.current });
@@ -234,6 +235,7 @@ export default function PosScreen() {
   const renderHeader = () => (
     <FadeInView distance={6}>
       <PosHeader />
+      {cartLocked && <PressableScale accessibilityRole="button" onPress={() => router.push('/pos/checkout')} style={styles.submissionNotice}><Text style={styles.messageText}>{submission.status === 'success' ? 'Venta registrada. Ver confirmación' : submission.status === 'loading' ? 'Comprobando confirmaciones guardadas…' : 'Hay una confirmación pendiente. Revisar venta'}</Text></PressableScale>}
       <PosSearchBar value={search} onChangeText={setSearch} onScanPress={() => router.push('/pos/scanner')} />
       <FlatList
         horizontal
@@ -283,6 +285,7 @@ export default function PosScreen() {
 }
 
 const styles = StyleSheet.create({
+  submissionNotice: { marginBottom: spacing.md, padding: spacing.md, minHeight: 44, borderRadius: radii.sm, backgroundColor: colors.amberSoft },
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { paddingHorizontal: spacing.lg },
   categories: { gap: spacing.sm, paddingTop: spacing.sm, paddingBottom: spacing.xs },
