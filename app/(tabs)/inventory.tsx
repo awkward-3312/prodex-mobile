@@ -198,7 +198,7 @@ export default function InventoryScreen() {
 
   const renderHeader = () => (
     <FadeInView distance={6}>
-      <AppHeader title="Inventario" subtitle={locationLabel} icon="cube-outline" />
+      <AppHeader title="Inventario" subtitle={locationLabel} />
 
       <View style={styles.summaryCard}>
         <View style={styles.summaryColumn}>

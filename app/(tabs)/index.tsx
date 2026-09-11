@@ -26,7 +26,7 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <AppHeader title="Inicio" subtitle={greeting} icon="home-outline" />
+        <AppHeader title="Inicio" subtitle={greeting} />
 
         <View style={styles.locationRow}>
           <Ionicons name="business-outline" size={16} color={colors.ink} />

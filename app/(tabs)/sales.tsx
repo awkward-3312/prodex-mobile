@@ -153,7 +153,7 @@ export default function SalesScreen() {
 
   const renderHeader = () => (
     <FadeInView distance={6}>
-      <AppHeader title="Ventas" subtitle="Historial y estados de cobro" icon="receipt-outline" />
+      <AppHeader title="Ventas" subtitle="Historial y estados de cobro" />
 
       <SearchField
         accessibilityLabel="Buscar venta por referencia o cliente"
@@ -217,7 +217,7 @@ export default function SalesScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { paddingHorizontal: spacing.lg },
-  searchBox: { marginTop: spacing.lg },
+  searchBox: { marginTop: spacing.md },
   filtersRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
   titleRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md, marginBottom: spacing.xs },
   sectionTitle: { color: colors.ink, fontSize: 16, fontWeight: fontWeights.bold },

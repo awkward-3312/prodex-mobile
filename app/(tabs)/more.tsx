@@ -26,7 +26,7 @@ export default function MoreScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <AppHeader title="Más" subtitle="Cuenta y sesión" icon="menu-outline" />
+        <AppHeader title="Más" subtitle="Cuenta y sesión" />
         <FadeInView style={styles.account}>
           <View style={styles.avatar}><Text style={styles.avatarText}>{displayName.slice(0, 2).toUpperCase()}</Text></View>
           <View style={styles.accountCopy}>
@@ -45,7 +45,7 @@ export default function MoreScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
-  account: { ...surfaces.card, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  account: { ...surfaces.card, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, marginTop: spacing.md },
   avatar: { width: 46, height: 46, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
   avatarText: { color: colors.brandDark, fontSize: typography.body, fontWeight: fontWeights.heavy },
   accountCopy: { flex: 1, minWidth: 0 },

@@ -1,3 +1,4 @@
+import { BrandSignature } from '../src/components/ui/BrandSignature';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -37,7 +38,7 @@ export default function LoginScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <FadeInView>
-            <View style={styles.brandMark}><Ionicons name="business-outline" size={25} color={colors.brand} /></View>
+            <BrandSignature />
             <Text style={styles.title}>Bienvenido a PRODEX</Text>
             <Text style={styles.subtitle}>Ingresa a tu espacio de trabajo para continuar.</Text>
             <View style={styles.form}>
@@ -74,7 +75,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   flex: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.xl },
-  brandMark: { width: 52, height: 52, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
   title: { marginTop: spacing.md, color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold },
   subtitle: { marginTop: spacing.sm, color: colors.inkMuted, fontSize: 13, lineHeight: 20 },
   form: { marginTop: spacing.xl },
