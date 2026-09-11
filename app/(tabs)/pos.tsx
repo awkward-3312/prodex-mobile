@@ -261,8 +261,8 @@ export default function PosScreen() {
         numColumns={2}
         columnWrapperStyle={styles.productRow}
         renderItem={renderProduct}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
+        ListHeaderComponent={renderHeader()}
+        ListEmptyComponent={renderEmpty()}
         ListFooterComponent={loadingMore ? <View style={styles.footerSpinner}><ActivityIndicator color={colors.brand} /></View> : null}
         contentContainerStyle={[styles.content, { paddingBottom: 96 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
