@@ -7,7 +7,7 @@ describe('getAuthErrorMessage', () => {
   });
 
   it('maps an unknown workspace', () => {
-    expect(getAuthErrorMessage(new ApiError({ status: 404, code: 'workspace_not_found', message: 'Not found' }))).toBe('No encontramos ese workspace.');
+    expect(getAuthErrorMessage(new ApiError({ status: 404, code: 'workspace_not_found', message: 'Not found' }))).toBe('No encontramos ese espacio de trabajo.');
   });
 
   it('maps network and timeout errors', () => {
