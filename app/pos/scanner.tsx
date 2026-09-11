@@ -10,7 +10,7 @@ import { FadeInView, PressableScale } from '../../src/components/motion';
 import { appConfig } from '../../src/config/app';
 import { usePosCart } from '../../src/context/PosCartContext';
 import { useAuth } from '../../src/context/AuthContext';
-import { colors, radii, spacing, typography } from '../../src/theme';
+import { colors, fontWeights, radii, sizing, spacing, typography } from '../../src/theme';
 import { resolveScannedProduct } from '../../src/services/pos/productBarcodeService';
 
 const barcodeTypes: BarcodeType[] = ['code128', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code39'];
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   iconButton: { width: 44, height: 44, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.9)' },
   backGlyph: { color: colors.ink, fontSize: 32, lineHeight: 34 },
-  cameraTitle: { color: colors.white, fontSize: typography.title, fontWeight: '800' },
+  cameraTitle: { color: colors.white, fontSize: typography.title, fontWeight: fontWeights.bold },
   location: { marginTop: spacing.xs, color: 'rgba(255,255,255,0.78)', fontSize: 11 },
   topSpacer: { width: 44 },
   scannerArea: { alignItems: 'center', justifyContent: 'center' },
@@ -114,27 +114,27 @@ const styles = StyleSheet.create({
   cornerTopRight: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3 },
   cornerBottomLeft: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3 },
   cornerBottomRight: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3 },
-  instruction: { marginTop: spacing.lg, paddingHorizontal: spacing.lg, color: colors.white, fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  instruction: { marginTop: spacing.lg, paddingHorizontal: spacing.lg, color: colors.white, fontSize: 13, fontWeight: fontWeights.semibold, textAlign: 'center' },
   bottomControls: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   torch: { minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radii.pill, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center' },
-  torchText: { color: colors.ink, fontSize: 12, fontWeight: '800' },
+  torchText: { color: colors.ink, fontSize: 12, fontWeight: fontWeights.bold },
   feedback: { width: '100%', marginBottom: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.brandSoft },
   feedbackError: { backgroundColor: colors.redSoft },
-  feedbackTitle: { color: colors.ink, fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  feedbackTitle: { color: colors.ink, fontSize: 14, fontWeight: fontWeights.bold, textAlign: 'center' },
   feedbackDetail: { marginTop: spacing.xs, color: colors.inkMuted, fontSize: 12, textAlign: 'center' },
   retry: { minHeight: 44, marginTop: spacing.sm, alignItems: 'center', justifyContent: 'center' },
-  retryText: { color: colors.brandDark, fontSize: 12, fontWeight: '800' },
-  cameraError: { marginBottom: spacing.sm, color: colors.white, fontSize: 12, fontWeight: '700' },
+  retryText: { color: colors.brandDark, fontSize: 12, fontWeight: fontWeights.bold },
+  cameraError: { marginBottom: spacing.sm, color: colors.white, fontSize: 12, fontWeight: fontWeights.bold },
   safe: { flex: 1, backgroundColor: colors.canvas },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
-  title: { color: colors.ink, fontSize: typography.title, fontWeight: '800', textAlign: 'center' },
+  title: { color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold, textAlign: 'center' },
   description: { marginTop: spacing.md, color: colors.inkMuted, fontSize: 14, lineHeight: 21, textAlign: 'center' },
-  primary: { width: '100%', minHeight: 48, marginTop: spacing.xl, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  primaryText: { color: colors.white, fontSize: 14, fontWeight: '800' },
+  primary: { width: '100%', minHeight: sizing.button, marginTop: spacing.xl, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
+  primaryText: { color: colors.white, fontSize: 14, fontWeight: fontWeights.bold },
   secondary: { width: '100%', minHeight: 44, marginTop: spacing.sm, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
-  secondaryText: { color: colors.brandDark, fontSize: 13, fontWeight: '800' },
+  secondaryText: { color: colors.brandDark, fontSize: 13, fontWeight: fontWeights.bold },
   closeText: { minHeight: 44, marginTop: spacing.md, alignItems: 'center', justifyContent: 'center' },
-  closeTextLabel: { color: colors.inkMuted, fontSize: 13, fontWeight: '700' },
+  closeTextLabel: { color: colors.inkMuted, fontSize: 13, fontWeight: fontWeights.bold },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas },
   loadingText: { color: colors.inkMuted, fontSize: 13 },
 });

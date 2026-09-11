@@ -5,6 +5,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { colors, fontWeights, radii, spacing, typography } from '../../theme';
 import type { MobileInventoryItem } from '../../types/mobileInventory';
 import { formatQuantity } from '../../utils/formatQuantity';
+import { StatusBadge } from '../ui/StatusBadge';
 
 type Props = { item: MobileInventoryItem };
 
@@ -36,13 +37,7 @@ export const InventoryRow = memo(function InventoryRow({ item }: Props) {
         <Text style={[styles.quantity, isOutOfStock && styles.quantityUnavailable]} numberOfLines={1}>
           {formatQuantity(item.inventory.available_quantity)}
         </Text>
-        {isException && (
-          <View style={[styles.badge, isOutOfStock ? styles.badgeOut : styles.badgeLow]}>
-            <Text style={[styles.badgeText, isOutOfStock ? styles.badgeTextOut : styles.badgeTextLow]} numberOfLines={1}>
-              {isOutOfStock ? 'Agotado' : 'Bajo stock'}
-            </Text>
-          </View>
-        )}
+        {isException && <StatusBadge label={isOutOfStock ? 'Agotado' : 'Bajo stock'} tone={isOutOfStock ? 'critical' : 'warning'} />}
       </View>
     </View>
   );
@@ -58,10 +53,4 @@ const styles = StyleSheet.create({
   stockColumn: { minWidth: 74, alignItems: 'flex-end', gap: 2 },
   quantity: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.heavy },
   quantityUnavailable: { color: colors.red },
-  badge: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radii.pill },
-  badgeOut: { backgroundColor: colors.redSoft },
-  badgeLow: { backgroundColor: colors.amberSoft },
-  badgeText: { fontSize: 10, fontWeight: fontWeights.semibold },
-  badgeTextOut: { color: colors.red },
-  badgeTextLow: { color: colors.amber },
 });

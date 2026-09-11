@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing, surfaces, typography } from '../../../theme';
+import { colors, fontWeights, spacing, surfaces, typography } from '../../../theme';
 import { formatCheckoutMinorUnits } from '../../../utils/formatCurrency';
 import type { CheckoutCurrency } from '../../../types/mobilePosCheckout';
 
@@ -26,13 +26,13 @@ const styles = StyleSheet.create({
   card: { ...surfaces.card, padding: spacing.md },
   validated: { borderColor: colors.brandSoft, backgroundColor: colors.surface },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.sm },
-  title: { color: colors.ink, fontSize: typography.subtitle, fontWeight: '800' },
-  mode: { marginTop: 2, color: colors.inkMuted, fontSize: typography.label, fontWeight: '700' },
-  count: { color: colors.inkMuted, fontSize: 11, fontWeight: '700' },
+  title: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
+  mode: { marginTop: 2, color: colors.inkMuted, fontSize: typography.label, fontWeight: fontWeights.bold },
+  count: { color: colors.inkMuted, fontSize: 11, fontWeight: fontWeights.bold },
   line: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.xs },
   label: { color: colors.inkMuted, fontSize: 12 },
-  value: { color: colors.ink, fontSize: 12, fontWeight: '700' },
+  value: { color: colors.ink, fontSize: 12, fontWeight: fontWeights.bold },
   totalLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
-  totalLabel: { color: colors.brandDark, fontSize: 13, fontWeight: '800' },
-  total: { color: colors.brandDark, fontSize: 22, fontWeight: '800' },
+  totalLabel: { color: colors.brandDark, fontSize: 13, fontWeight: fontWeights.bold },
+  total: { color: colors.brandDark, fontSize: 22, fontWeight: fontWeights.heavy },
 });

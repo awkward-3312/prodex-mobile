@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '../../context/AuthContext';
-import { colors, radii, sizing, spacing, typography } from '../../theme';
+import { colors, fontWeights, radii, sizing, spacing, typography } from '../../theme';
 
 type Props = {
   onOptionsPress: () => void;
@@ -40,9 +40,9 @@ export function PosHeader({ onOptionsPress }: Props) {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: spacing.md, paddingBottom: spacing.sm },
   copy: { flex: 1, paddingRight: spacing.md },
-  title: { color: colors.ink, fontSize: typography.title, fontWeight: '800' },
+  title: { color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold },
   location: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
-  locationText: { color: colors.inkMuted, fontSize: typography.caption, fontWeight: '600' },
+  locationText: { color: colors.inkMuted, fontSize: typography.caption, fontWeight: fontWeights.semibold },
   options: { width: sizing.iconButton, height: sizing.iconButton, borderRadius: radii.sm, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line },
   pressed: { opacity: 0.7 },
 });

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -41,12 +42,10 @@ export default function DashboardScreen() {
           <EmptyState icon="bar-chart-outline" title="Panel de ventas en camino" message="Cuando conectemos tus datos reales de ventas, utilidad e inventario, los verás aquí." compact />
         </View>
 
-        <Text style={styles.actionsTitle}>Acciones rápidas</Text>
-        <View style={styles.actionsCard}>
-          <QuickAction label="Nueva venta" icon="add-circle-outline" color={colors.blue} backgroundColor={colors.blueSoft} />
-          <QuickAction label="Agregar producto" icon="cube-outline" color={colors.teal} backgroundColor={colors.tealSoft} />
-          <QuickAction label="Ver reportes" icon="bar-chart-outline" color={colors.brand} backgroundColor={colors.brandSoft} />
-          <QuickAction label="Cobros" icon="card-outline" color={colors.amber} backgroundColor={colors.amberSoft} />
+        <Text style={styles.actionsTitle}>Accesos rápidos</Text>
+        <View style={styles.actionsRow}>
+          <QuickAction label="Nueva venta" icon="cart-outline" color={colors.brand} backgroundColor={colors.brandSoft} onPress={() => router.push('/(tabs)/pos')} />
+          <QuickAction label="Escanear código" icon="scan-outline" color={colors.blue} backgroundColor={colors.blueSoft} onPress={() => router.push('/pos/scanner')} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -63,5 +62,5 @@ const styles = StyleSheet.create({
   sectionTitle: { marginTop: spacing.xl, marginBottom: spacing.md, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
   summaryCard: { ...surfaces.card, overflow: 'hidden' },
   actionsTitle: { marginTop: spacing.xl, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
-  actionsCard: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spacing.md, marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  actionsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
 });

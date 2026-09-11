@@ -3,7 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensio
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FadeInView, PressableScale } from '../motion';
-import { colors, motion, radii, spacing, typography } from '../../theme';
+import { colors, fontWeights, motion, radii, sizing, spacing, typography } from '../../theme';
 import type { CartItem } from '../../types/pos';
 import { formatMinorUnits } from '../../utils/formatCurrency';
 import { CartItemRow } from './CartItemRow';
@@ -44,25 +44,25 @@ const styles = StyleSheet.create({
   sheet: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg, backgroundColor: colors.surface },
   handle: { alignSelf: 'center', width: 38, height: 4, marginBottom: spacing.md, borderRadius: radii.pill, backgroundColor: colors.line },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  title: { color: colors.ink, fontSize: typography.title, fontWeight: '800' },
-  customerLabel: { marginTop: spacing.md, color: colors.inkMuted, fontSize: 11, fontWeight: '700' },
-  customer: { marginTop: spacing.xs, color: colors.ink, fontSize: 14, fontWeight: '700' },
+  title: { color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold },
+  customerLabel: { marginTop: spacing.md, color: colors.inkMuted, fontSize: 11, fontWeight: fontWeights.bold },
+  customer: { marginTop: spacing.xs, color: colors.ink, fontSize: 14, fontWeight: fontWeights.bold },
   close: { width: 44, height: 44, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas },
   customerAction: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.sm },
   customerHint: { color: colors.inkMuted, fontSize: 11 },
-  change: { color: colors.brand, fontSize: 12, fontWeight: '800' },
-  productsTitle: { marginTop: spacing.sm, color: colors.ink, fontSize: 14, fontWeight: '800' },
+  change: { color: colors.brand, fontSize: 12, fontWeight: fontWeights.bold },
+  productsTitle: { marginTop: spacing.sm, color: colors.ink, fontSize: 14, fontWeight: fontWeights.bold },
   items: { flex: 1, minHeight: 0, marginTop: spacing.xs },
   itemsContent: { paddingBottom: spacing.sm },
   empty: { paddingVertical: spacing.xl, color: colors.inkMuted, fontSize: 13, textAlign: 'center' },
   totals: { paddingTop: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   totalLine: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.xs },
   muted: { color: colors.inkMuted, fontSize: 12 },
-  lineValue: { color: colors.ink, fontSize: 12, fontWeight: '700' },
+  lineValue: { color: colors.ink, fontSize: 12, fontWeight: fontWeights.bold },
   grandLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.xs, paddingTop: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
-  grandLabel: { color: colors.ink, fontSize: 16, fontWeight: '800' },
-  grandValue: { color: colors.brandDark, fontSize: 20, fontWeight: '800' },
-  checkout: { minHeight: 48, marginTop: spacing.md, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  checkoutText: { color: colors.white, fontSize: 14, fontWeight: '800' },
+  grandLabel: { color: colors.ink, fontSize: 16, fontWeight: fontWeights.bold },
+  grandValue: { color: colors.brandDark, fontSize: 20, fontWeight: fontWeights.heavy },
+  checkout: { minHeight: sizing.button, marginTop: spacing.md, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
+  checkoutText: { color: colors.white, fontSize: 14, fontWeight: fontWeights.bold },
   disabled: { opacity: 0.45 },
 });

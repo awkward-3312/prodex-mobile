@@ -1,6 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FadeInView } from '../../src/components/motion';
@@ -8,9 +7,10 @@ import { CategoryChip } from '../../src/components/pos/CategoryChip';
 import { SaleRow } from '../../src/components/sales/SaleRow';
 import { AppHeader } from '../../src/components/ui/AppHeader';
 import { EmptyState } from '../../src/components/ui/EmptyState';
+import { SearchField } from '../../src/components/ui/SearchField';
 import { useAuth } from '../../src/context/AuthContext';
 import { getMobileSales, mergeMobileSalesPages, mobileSaleKey, MobileSalesError } from '../../src/services/sales/mobileSalesService';
-import { colors, fontWeights, spacing, surfaces, typography } from '../../src/theme';
+import { colors, fontWeights, spacing } from '../../src/theme';
 import type { MobileSale, MobileSalePagination, MobileSalePaymentStatus } from '../../src/types/mobileSales';
 
 const PER_PAGE = 30;
@@ -155,23 +155,13 @@ export default function SalesScreen() {
     <FadeInView distance={6}>
       <AppHeader title="Ventas" subtitle="Historial y estados de cobro" icon="receipt-outline" />
 
-      <View style={styles.searchBox}>
-        <Ionicons name="search-outline" size={19} color={colors.inkMuted} />
-        <TextInput
-          accessibilityLabel="Buscar venta por referencia o cliente"
-          placeholder="Buscar por referencia o cliente"
-          placeholderTextColor={colors.inkMuted}
-          value={search}
-          onChangeText={setSearch}
-          style={styles.searchInput}
-          returnKeyType="search"
-        />
-        {search.length > 0 && (
-          <Pressable accessibilityLabel="Limpiar búsqueda" accessibilityRole="button" onPress={() => setSearch('')} style={styles.clear}>
-            <Ionicons name="close-circle" size={18} color={colors.inkMuted} />
-          </Pressable>
-        )}
-      </View>
+      <SearchField
+        accessibilityLabel="Buscar venta por referencia o cliente"
+        placeholder="Buscar por referencia o cliente"
+        value={search}
+        onChangeText={setSearch}
+        style={styles.searchBox}
+      />
 
       <View style={styles.filtersRow}>
         {STATUS_FILTERS.map((filter) => (
@@ -227,9 +217,7 @@ export default function SalesScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { paddingHorizontal: spacing.lg },
-  searchBox: { ...surfaces.input, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, marginTop: spacing.lg },
-  searchInput: { flex: 1, minHeight: 44, color: colors.ink, fontSize: typography.body },
-  clear: { width: 32, height: 44, alignItems: 'center', justifyContent: 'center' },
+  searchBox: { marginTop: spacing.lg },
   filtersRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
   titleRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md, marginBottom: spacing.xs },
   sectionTitle: { color: colors.ink, fontSize: 16, fontWeight: fontWeights.bold },

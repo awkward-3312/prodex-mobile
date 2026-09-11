@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 
 import { FadeInView, PressableScale } from '../motion';
-import { colors, motion, radii, spacing, surfaces } from '../../theme';
+import { colors, fontWeights, motion, radii, spacing, surfaces } from '../../theme';
 import { formatMinorUnits } from '../../utils/formatCurrency';
 
 type Props = { itemCount: number; totalCents: number; onViewCart: () => void; onCheckout: () => void };
@@ -34,12 +34,12 @@ export function CartSummaryBar({ itemCount, totalCents, onViewCart, onCheckout }
 const styles = StyleSheet.create({
   wrapper: { ...surfaces.card, position: 'absolute', left: spacing.md, right: spacing.md, bottom: spacing.sm, minHeight: 70, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, zIndex: 10 },
   info: { flex: 1, minWidth: 74 },
-  count: { color: colors.inkMuted, fontSize: 11, fontWeight: '700' },
-  total: { marginTop: spacing.xs, color: colors.ink, fontSize: 16, fontWeight: '800' },
-  estimate: { marginTop: 2, color: colors.inkMuted, fontSize: 10, fontWeight: '700' },
+  count: { color: colors.inkMuted, fontSize: 11, fontWeight: fontWeights.bold },
+  total: { marginTop: spacing.xs, color: colors.ink, fontSize: 16, fontWeight: fontWeights.heavy },
+  estimate: { marginTop: 2, color: colors.inkMuted, fontSize: 10, fontWeight: fontWeights.bold },
   secondary: { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line },
-  secondaryText: { color: colors.brandDark, fontSize: 12, fontWeight: '800' },
+  secondaryText: { color: colors.brandDark, fontSize: 12, fontWeight: fontWeights.bold },
   primary: { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  primaryText: { color: colors.white, fontSize: 12, fontWeight: '800' },
+  primaryText: { color: colors.white, fontSize: 12, fontWeight: fontWeights.bold },
   disabled: { opacity: 0.45 },
 });

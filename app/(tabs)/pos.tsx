@@ -14,7 +14,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { useAuth } from '../../src/context/AuthContext';
 import { canAddProductQuantity, usePosCart } from '../../src/context/PosCartContext';
 import { getMobilePosCatalog, mapMobilePosCatalogItemToPosProduct, mergeCatalogPages, MobilePosCatalogError } from '../../src/services/pos/mobilePosCatalogService';
-import { colors, radii, spacing } from '../../src/theme';
+import { colors, fontWeights, radii, spacing } from '../../src/theme';
 import type { MobilePosCatalogItem, MobilePosCategory, MobilePosPagination } from '../../src/types/mobilePosCatalog';
 import type { PosProduct } from '../../src/types/pos';
 import { decideCheckoutNavigation } from '../../src/utils/posCart';
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg },
   categories: { gap: spacing.sm, paddingTop: spacing.sm, paddingBottom: spacing.xs },
   titleRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md, marginBottom: spacing.sm },
-  productsTitle: { color: colors.ink, fontSize: 16, fontWeight: '800' },
+  productsTitle: { color: colors.ink, fontSize: 16, fontWeight: fontWeights.bold },
   productRow: { justifyContent: 'space-between', marginBottom: spacing.md },
   productSlot: { width: '48%' },
   productCard: { width: '100%' },
@@ -291,8 +291,8 @@ const styles = StyleSheet.create({
   snackbarWrap: { position: 'absolute', left: spacing.md, right: spacing.md, zIndex: 20 },
   snackbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.sm, backgroundColor: colors.blueSoft },
   messageText: { flex: 1, color: colors.ink, fontSize: 12, lineHeight: 17 },
-  messageClose: { marginLeft: spacing.sm, color: colors.blue, fontSize: 11, fontWeight: '800' },
+  messageClose: { marginLeft: spacing.sm, color: colors.blue, fontSize: 11, fontWeight: fontWeights.bold },
   emptyProducts: { alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
-  emptyTitle: { color: colors.ink, fontSize: 15, fontWeight: '800', textAlign: 'center' },
+  emptyTitle: { color: colors.ink, fontSize: 15, fontWeight: fontWeights.bold, textAlign: 'center' },
   emptyText: { marginTop: spacing.sm, color: colors.inkMuted, fontSize: 12, textAlign: 'center' },
 });

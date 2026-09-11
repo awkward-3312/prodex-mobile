@@ -1,7 +1,7 @@
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { PressableScale } from '../../motion';
-import { colors, radii, spacing, surfaces, typography } from '../../../theme';
+import { colors, fontWeights, radii, spacing, surfaces, typography } from '../../../theme';
 import type { CheckoutCurrency } from '../../../types/mobilePosCheckout';
 import { formatCheckoutMinorUnits } from '../../../utils/formatCurrency';
 
@@ -12,13 +12,13 @@ export function CashPaymentForm({ totalCents, receivedInput, receivedCents, shor
 }
 
 const styles = StyleSheet.create({
-  container: { ...surfaces.card, marginTop: spacing.md, padding: spacing.md, backgroundColor: colors.brandSoft, borderColor: colors.brandSoft },
-  label: { color: colors.ink, fontSize: typography.caption, fontWeight: '800' },
-  input: { ...surfaces.input, marginTop: spacing.sm, paddingHorizontal: spacing.md, color: colors.ink, fontSize: 20, fontWeight: '800' },
+  container: { ...surfaces.card, marginTop: spacing.md, padding: spacing.md },
+  label: { color: colors.ink, fontSize: typography.caption, fontWeight: fontWeights.bold },
+  input: { ...surfaces.input, marginTop: spacing.sm, paddingHorizontal: spacing.md, color: colors.ink, fontSize: 20, fontWeight: fontWeights.heavy },
   quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
-  quick: { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
-  quickText: { color: colors.brandDark, fontSize: 12, fontWeight: '800' },
+  quick: { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas, borderWidth: 1, borderColor: colors.line },
+  quickText: { color: colors.brandDark, fontSize: 12, fontWeight: fontWeights.bold },
   result: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: spacing.sm, rowGap: spacing.xs, marginTop: spacing.sm },
   resultLabel: { color: colors.inkMuted, fontSize: 12 },
-  resultValue: { marginRight: spacing.md, color: colors.ink, fontSize: 13, fontWeight: '800' },
+  resultValue: { marginRight: spacing.md, color: colors.ink, fontSize: 13, fontWeight: fontWeights.bold },
 });

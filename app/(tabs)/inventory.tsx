@@ -1,6 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FadeInView } from '../../src/components/motion';
@@ -8,6 +7,7 @@ import { CategoryChip } from '../../src/components/pos/CategoryChip';
 import { InventoryRow } from '../../src/components/inventory/InventoryRow';
 import { AppHeader } from '../../src/components/ui/AppHeader';
 import { EmptyState } from '../../src/components/ui/EmptyState';
+import { SearchField } from '../../src/components/ui/SearchField';
 import { useAuth } from '../../src/context/AuthContext';
 import { getMobileInventory, mergeMobileInventoryPages, mobileInventoryItemKey, MobileInventoryError } from '../../src/services/inventory/mobileInventoryService';
 import { colors, fontWeights, spacing, surfaces, typography } from '../../src/theme';
@@ -200,38 +200,28 @@ export default function InventoryScreen() {
     <FadeInView distance={6}>
       <AppHeader title="Inventario" subtitle={locationLabel} icon="cube-outline" />
 
-      <View style={styles.summaryRow}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Total</Text>
+      <View style={styles.summaryCard}>
+        <View style={styles.summaryColumn}>
           <Text style={styles.summaryValue}>{summary ? summary.total_items : '--'}</Text>
+          <Text style={styles.summaryLabel}>Total</Text>
         </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Bajo stock</Text>
+        <View style={[styles.summaryColumn, styles.summaryDivider]}>
           <Text style={[styles.summaryValue, { color: colors.amber }]}>{summary ? summary.low_stock_count : '--'}</Text>
+          <Text style={styles.summaryLabel}>Bajo stock</Text>
         </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Agotados</Text>
+        <View style={[styles.summaryColumn, styles.summaryDivider]}>
           <Text style={[styles.summaryValue, { color: colors.red }]}>{summary ? summary.out_of_stock_count : '--'}</Text>
+          <Text style={styles.summaryLabel}>Agotados</Text>
         </View>
       </View>
 
-      <View style={styles.searchBox}>
-        <Ionicons name="search-outline" size={19} color={colors.inkMuted} />
-        <TextInput
-          accessibilityLabel="Buscar producto por nombre, SKU o código de barras"
-          placeholder="Buscar producto, SKU o código"
-          placeholderTextColor={colors.inkMuted}
-          value={search}
-          onChangeText={setSearch}
-          style={styles.searchInput}
-          returnKeyType="search"
-        />
-        {search.length > 0 && (
-          <Pressable accessibilityLabel="Limpiar búsqueda" accessibilityRole="button" onPress={() => setSearch('')} style={styles.clear}>
-            <Ionicons name="close-circle" size={18} color={colors.inkMuted} />
-          </Pressable>
-        )}
-      </View>
+      <SearchField
+        accessibilityLabel="Buscar producto por nombre, SKU o código de barras"
+        placeholder="Buscar producto, SKU o código"
+        value={search}
+        onChangeText={setSearch}
+        style={styles.searchBox}
+      />
 
       <FlatList
         horizontal
@@ -299,15 +289,14 @@ export default function InventoryScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { paddingHorizontal: spacing.lg },
-  summaryRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
-  summaryCard: { ...surfaces.card, flex: 1, padding: spacing.md },
-  summaryLabel: { color: colors.inkMuted, fontSize: typography.label, fontWeight: fontWeights.bold },
-  summaryValue: { marginTop: spacing.xs, color: colors.ink, fontSize: typography.metric, fontWeight: fontWeights.heavy },
-  searchBox: { ...surfaces.input, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, marginTop: spacing.md },
-  searchInput: { flex: 1, minHeight: 44, color: colors.ink, fontSize: typography.body },
-  clear: { width: 32, height: 44, alignItems: 'center', justifyContent: 'center' },
-  chipsRow: { gap: spacing.sm, paddingTop: spacing.sm, paddingBottom: spacing.xs },
-  stockFiltersRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingBottom: spacing.xs },
+  summaryCard: { ...surfaces.compactCard, flexDirection: 'row', marginTop: spacing.md, paddingVertical: spacing.sm },
+  summaryColumn: { flex: 1, alignItems: 'center' },
+  summaryDivider: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.line },
+  summaryLabel: { marginTop: 2, color: colors.inkMuted, fontSize: typography.label, fontWeight: fontWeights.semibold },
+  summaryValue: { color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.heavy },
+  searchBox: { marginTop: spacing.md },
+  chipsRow: { gap: spacing.sm, paddingTop: spacing.md, paddingBottom: spacing.xs },
+  stockFiltersRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs, paddingBottom: spacing.xs },
   titleRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm, marginBottom: spacing.xs },
   sectionTitle: { color: colors.ink, fontSize: 16, fontWeight: fontWeights.bold },
   footerSpinner: { paddingVertical: spacing.lg },

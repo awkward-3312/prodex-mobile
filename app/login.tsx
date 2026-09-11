@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FadeInView, PressableScale } from '../src/components/motion';
 import { useAuth } from '../src/context/AuthContext';
-import { colors, motion, radii, spacing, typography } from '../src/theme';
+import { colors, fontWeights, motion, radii, sizing, spacing, typography } from '../src/theme';
 
 export default function LoginScreen() {
   const { status, error, session, retryBootstrap, signIn } = useAuth();
@@ -39,10 +39,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { flex: 1, justifyContent: 'center', padding: spacing.xl },
   brandMark: { width: 52, height: 52, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
-  title: { marginTop: spacing.lg, color: colors.ink, fontSize: typography.title, fontWeight: '800' },
+  title: { marginTop: spacing.lg, color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold },
   subtitle: { marginTop: spacing.sm, color: colors.inkMuted, fontSize: 13, lineHeight: 20 },
   form: { marginTop: spacing.xl },
-  label: { marginTop: spacing.md, marginBottom: spacing.xs, color: colors.ink, fontSize: 12, fontWeight: '800' },
+  label: { marginTop: spacing.md, marginBottom: spacing.xs, color: colors.ink, fontSize: 12, fontWeight: fontWeights.bold },
   input: { minHeight: 48, paddingHorizontal: spacing.md, borderRadius: radii.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, color: colors.ink, fontSize: 14 },
   hint: { marginTop: spacing.xs, color: colors.inkMuted, fontSize: 11 },
   passwordRow: { flexDirection: 'row', alignItems: 'center', minHeight: 48, borderRadius: radii.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
@@ -50,8 +50,8 @@ const styles = StyleSheet.create({
   passwordToggle: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   error: { marginTop: spacing.md, color: colors.red, fontSize: 12, lineHeight: 18 },
   retry: { minHeight: 44, marginTop: spacing.sm, alignItems: 'center', justifyContent: 'center' },
-  retryText: { color: colors.brand, fontSize: 13, fontWeight: '800' },
-  primary: { minHeight: 50, marginTop: spacing.xl, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  primaryText: { color: colors.white, fontSize: 14, fontWeight: '800' },
+  retryText: { color: colors.brand, fontSize: 13, fontWeight: fontWeights.bold },
+  primary: { minHeight: sizing.button, marginTop: spacing.xl, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
+  primaryText: { color: colors.white, fontSize: 14, fontWeight: fontWeights.bold },
   disabled: { opacity: 0.5 },
 });

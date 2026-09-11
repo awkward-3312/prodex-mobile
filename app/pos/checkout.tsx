@@ -11,7 +11,7 @@ import { FadeInView, PressableScale } from '../../src/components/motion';
 import { useAuth } from '../../src/context/AuthContext';
 import { usePosCart } from '../../src/context/PosCartContext';
 import { cartItemsToPreflightLines, checkoutContextLocationLabel, fiscalSummaryFromPreflight, getCheckoutContext, MobilePosCheckoutError, paymentIntentLine, preflightSale, searchClients } from '../../src/services/pos/mobilePosCheckoutService';
-import { colors, fontWeights, motion, radii, spacing, surfaces, typography } from '../../src/theme';
+import { colors, fontWeights, motion, radii, sizing, spacing, surfaces, typography } from '../../src/theme';
 import type { CheckoutAccount, CheckoutContext, CheckoutCurrency, CheckoutCustomer, CheckoutPaymentMethod, ClientSearchResult } from '../../src/types/mobilePosCheckout';
 import type { FiscalSummary, PreflightError, PreflightPaymentIntentLine, SalePreflightResponse } from '../../src/types/mobilePosSalePreflight';
 import { formatCheckoutMinorUnits, parseMinorUnits } from '../../src/utils/formatCurrency';
@@ -302,7 +302,7 @@ export default function CheckoutScreen() {
 
           {validationMessage && <FadeInView><Text style={styles.error}>{validationMessage}</Text></FadeInView>}
           {activePreflightError && <FadeInView style={styles.preflightErrors}>{activePreflightError.split('\n').map((line) => <Text key={line} style={styles.error}>{line}</Text>)}</FadeInView>}
-          <FadeInView style={[styles.preflightStatus, preflightStatus === 'validated' && styles.validated, preflightStatus === 'loading' && styles.pending]} distance={4} duration={motion.duration.fast}>
+          <FadeInView style={[styles.preflightStatus, preflightStatus === 'validated' && styles.validated]} distance={4} duration={motion.duration.fast}>
             {preflightStatus === 'loading' ? <ActivityIndicator size="small" color={colors.brand} /> : <Ionicons name={preflightStatus === 'validated' ? 'checkmark-circle' : 'shield-checkmark-outline'} size={20} color={preflightStatus === 'validated' ? colors.brand : colors.inkMuted} />}
             <Text style={[styles.preflightStatusText, preflightStatus === 'validated' && styles.validatedText]}>{preflightStatus === 'validated' ? 'Venta validada por PRODEX. Aún no se ha confirmado el cobro.' : preflightStatus === 'loading' ? 'Validando venta con PRODEX...' : 'Pendiente de validación fiscal.'}</Text>
           </FadeInView>
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   location: { marginTop: spacing.xs, color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.medium },
   sectionTitle: { marginTop: spacing.lg, marginBottom: spacing.sm, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
   stateBox: { ...surfaces.card, alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md, padding: spacing.md },
-  stateText: { color: colors.inkMuted, fontSize: 12, fontWeight: '700' },
+  stateText: { color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.bold },
   customer: { ...surfaces.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.md },
   customerCopy: { flex: 1 },
   customerLabel: { color: colors.inkMuted, fontSize: 12 },
@@ -338,11 +338,11 @@ const styles = StyleSheet.create({
   change: { color: colors.brand, fontSize: 12, fontWeight: fontWeights.semibold },
   methods: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spacing.sm },
   paymentBox: { ...surfaces.card, marginTop: spacing.md, padding: spacing.md },
-  inputLabel: { color: colors.ink, fontSize: 12, fontWeight: '800' },
+  inputLabel: { color: colors.ink, fontSize: 12, fontWeight: fontWeights.bold },
   input: { ...surfaces.input, marginTop: spacing.sm, paddingHorizontal: spacing.md, color: colors.ink },
   hint: { marginTop: spacing.sm, color: colors.inkMuted, fontSize: 11, lineHeight: 16 },
   mixedLine: { marginTop: spacing.md },
-  mixedLabel: { color: colors.ink, fontSize: 12, fontWeight: '800' },
+  mixedLabel: { color: colors.ink, fontSize: 12, fontWeight: fontWeights.bold },
   accountBox: { marginTop: spacing.md },
   accountList: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   accountChip: { minHeight: 38, paddingHorizontal: spacing.md, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
@@ -353,20 +353,19 @@ const styles = StyleSheet.create({
   confirmContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   confirmText: { color: colors.white, fontSize: 14, fontWeight: fontWeights.semibold },
   disabled: { opacity: 0.45 },
-  error: { marginTop: spacing.sm, color: colors.red, fontSize: 12, fontWeight: '700', lineHeight: 17 },
+  error: { marginTop: spacing.sm, color: colors.red, fontSize: 12, fontWeight: fontWeights.bold, lineHeight: 17 },
   preflightErrors: { marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.redSoft },
   preflightStatus: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
-  pending: { backgroundColor: colors.brandSoft, borderColor: colors.brandSoft },
-  preflightStatusText: { flex: 1, color: colors.inkMuted, fontSize: 12, fontWeight: '700', lineHeight: 17 },
+  preflightStatusText: { flex: 1, color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.bold, lineHeight: 17 },
   validated: { backgroundColor: colors.brandSoft, borderColor: colors.brandSoft },
   validatedText: { color: colors.ink },
   retry: { minHeight: 42, paddingHorizontal: spacing.lg, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
   retryText: { color: colors.white, fontSize: 12, fontWeight: fontWeights.semibold },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
-  emptyTitle: { marginTop: spacing.lg, color: colors.ink, fontSize: typography.title, fontWeight: '800' },
+  emptyTitle: { marginTop: spacing.lg, color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold },
   emptyText: { marginTop: spacing.sm, color: colors.inkMuted, fontSize: 13, textAlign: 'center' },
-  primary: { minHeight: 48, width: '100%', marginTop: spacing.xl, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  primaryText: { color: colors.white, fontSize: 14, fontWeight: '800' },
+  primary: { minHeight: sizing.button, width: '100%', marginTop: spacing.xl, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
+  primaryText: { color: colors.white, fontSize: 14, fontWeight: fontWeights.bold },
   overlay: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(23, 50, 77, 0.38)' },
   clientSheetWrap: { width: '100%' },

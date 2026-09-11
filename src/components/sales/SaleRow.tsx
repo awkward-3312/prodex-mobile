@@ -1,9 +1,10 @@
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, fontWeights, radii, spacing, typography } from '../../theme';
+import { colors, fontWeights, spacing, typography } from '../../theme';
 import type { MobileSale } from '../../types/mobileSales';
 import { formatCurrency, parseMinorUnits } from '../../utils/formatCurrency';
+import { StatusBadge } from '../ui/StatusBadge';
 
 type Props = { sale: MobileSale };
 
@@ -36,7 +37,6 @@ function formatSaleDateTime(value: string): string {
 }
 
 export const SaleRow = memo(function SaleRow({ sale }: Props) {
-  const isPaid = sale.payment_status === 'paid';
   const customerName = sale.customer?.name ?? 'Cliente no registrado';
 
   return (
@@ -48,11 +48,7 @@ export const SaleRow = memo(function SaleRow({ sale }: Props) {
         </View>
         <View style={styles.bottomLine}>
           <Text style={styles.meta} numberOfLines={1}>{customerName} · {formatSaleDateTime(sale.date)}</Text>
-          <View style={[styles.badge, isPaid ? styles.badgePaid : styles.badgeDue]}>
-            <Text style={[styles.badgeText, isPaid ? styles.badgeTextPaid : styles.badgeTextDue]} numberOfLines={1}>
-              {STATUS_LABEL[sale.payment_status]}
-            </Text>
-          </View>
+          <StatusBadge label={STATUS_LABEL[sale.payment_status]} tone={sale.payment_status === 'paid' ? 'positive' : 'warning'} />
         </View>
       </View>
     </View>
@@ -67,10 +63,4 @@ const styles = StyleSheet.create({
   total: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.heavy },
   bottomLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   meta: { flex: 1, color: colors.inkMuted, fontSize: 12 },
-  badge: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radii.pill },
-  badgePaid: { backgroundColor: colors.brandSoft },
-  badgeDue: { backgroundColor: colors.amberSoft },
-  badgeText: { fontSize: 10, fontWeight: fontWeights.semibold },
-  badgeTextPaid: { color: colors.brand },
-  badgeTextDue: { color: colors.amber },
 });

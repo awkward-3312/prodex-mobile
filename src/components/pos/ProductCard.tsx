@@ -7,6 +7,7 @@ import { PressableScale } from '../motion';
 import { colors, fontWeights, radii, spacing, surfaces, typography } from '../../theme';
 import type { PosProduct } from '../../types/pos';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { StatusBadge } from '../ui/StatusBadge';
 
 type Props = { product: PosProduct; onPress: () => void; style?: StyleProp<ViewStyle> };
 
@@ -32,9 +33,11 @@ export const ProductCard = memo(function ProductCard({ product, onPress, style }
       <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
       <Text style={styles.price}>{formatCurrency(product.price)}</Text>
       {isException && (
-        <View style={[styles.stockBadge, isUnavailable ? styles.stockUnavailable : styles.stockLow]}>
-          <Text style={[styles.stock, !isUnavailable && styles.lowStock, isUnavailable && styles.unavailable]} numberOfLines={1}>{isUnavailable ? (product.sellabilityReason ?? 'No disponible') : product.oversellingAllowed && product.stock <= 0 ? 'Venta permitida' : `${product.stock} disp.`}</Text>
-        </View>
+        <StatusBadge
+          label={isUnavailable ? (product.sellabilityReason ?? 'No disponible') : product.oversellingAllowed && product.stock <= 0 ? 'Venta permitida' : `${product.stock} disp.`}
+          tone={isUnavailable ? 'critical' : 'warning'}
+          style={styles.stockBadge}
+        />
       )}
     </PressableScale>
   );
@@ -46,11 +49,6 @@ const styles = StyleSheet.create({
   productImage: { width: '100%', height: '100%' },
   name: { marginTop: spacing.sm, color: colors.ink, fontSize: typography.body, fontWeight: fontWeights.semibold, lineHeight: 18 },
   price: { marginTop: spacing.xs, color: colors.ink, fontSize: 17, fontWeight: fontWeights.heavy, lineHeight: 21 },
-  stockBadge: { alignSelf: 'flex-start', maxWidth: '100%', marginTop: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.pill },
-  stockLow: { backgroundColor: colors.amberSoft },
-  stockUnavailable: { backgroundColor: colors.redSoft },
-  stock: { color: colors.brandDark, fontSize: 12, fontWeight: fontWeights.semibold },
-  lowStock: { color: colors.amber },
-  unavailable: { color: colors.red },
+  stockBadge: { marginTop: spacing.xs },
   disabled: { opacity: 0.48 },
 });
