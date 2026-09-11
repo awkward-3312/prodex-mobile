@@ -1,19 +1,33 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 
-import { colors, radii, spacing, surfaces } from '../../theme';
+import { FadeInView, PressableScale } from '../motion';
+import { colors, motion, radii, spacing, surfaces } from '../../theme';
 import { formatMinorUnits } from '../../utils/formatCurrency';
 
 type Props = { itemCount: number; totalCents: number; onViewCart: () => void; onCheckout: () => void };
 
 export function CartSummaryBar({ itemCount, totalCents, onViewCart, onCheckout }: Props) {
   const hasItems = itemCount > 0;
+  const reducedMotion = useReducedMotion();
+  const pulse = useSharedValue(1);
+
+  const totalStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+  }));
+
+  useEffect(() => {
+    if (!hasItems) return;
+    pulse.value = reducedMotion ? 1 : withSequence(withTiming(1.035, { duration: motion.duration.fast }), withTiming(1, { duration: motion.duration.fast }));
+  }, [hasItems, itemCount, pulse, reducedMotion, totalCents]);
 
   return (
-    <View style={styles.wrapper}>
-      <View style={styles.info}><Text style={styles.count}>{hasItems ? `${itemCount} ${itemCount === 1 ? 'artículo' : 'artículos'}` : 'Carrito vacío'}</Text><Text style={styles.total}>{formatMinorUnits(totalCents)}</Text>{hasItems && <Text style={styles.estimate}>Subtotal estimado</Text>}</View>
-      {hasItems && <Pressable accessibilityLabel="Ver carrito" accessibilityRole="button" onPress={onViewCart} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}><Text style={styles.secondaryText}>Ver carrito</Text></Pressable>}
-      <Pressable accessibilityLabel="Cobrar venta" accessibilityRole="button" accessibilityState={{ disabled: !hasItems }} disabled={!hasItems} onPress={onCheckout} style={({ pressed }) => [styles.primary, !hasItems && styles.disabled, pressed && styles.pressed]}><Text style={styles.primaryText}>Cobrar</Text></Pressable>
-    </View>
+    <FadeInView style={styles.wrapper} distance={hasItems ? 10 : 0} duration={motion.duration.slow}>
+      <View style={styles.info}><Text style={styles.count}>{hasItems ? `${itemCount} ${itemCount === 1 ? 'artículo' : 'artículos'}` : 'Carrito vacío'}</Text><Animated.Text style={[styles.total, totalStyle]}>{formatMinorUnits(totalCents)}</Animated.Text>{hasItems && <Text style={styles.estimate}>Subtotal estimado</Text>}</View>
+      {hasItems && <PressableScale accessibilityLabel="Ver carrito" accessibilityRole="button" onPress={onViewCart} style={styles.secondary}><Text style={styles.secondaryText}>Ver carrito</Text></PressableScale>}
+      <PressableScale accessibilityLabel="Cobrar venta" accessibilityRole="button" accessibilityState={{ disabled: !hasItems }} disabled={!hasItems} onPress={onCheckout} scaleTo={motion.pressScalePrimary} style={[styles.primary, !hasItems && styles.disabled]}><Text style={styles.primaryText}>Cobrar</Text></PressableScale>
+    </FadeInView>
   );
 }
 
@@ -28,5 +42,4 @@ const styles = StyleSheet.create({
   primary: { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
   primaryText: { color: colors.white, fontSize: 12, fontWeight: '800' },
   disabled: { opacity: 0.45 },
-  pressed: { opacity: 0.75 },
 });

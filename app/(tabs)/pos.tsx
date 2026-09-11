@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { router } from 'expo-router';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FadeInView, PressableScale } from '../../src/components/motion';
 import { CartSheet } from '../../src/components/pos/CartSheet';
 import { CartSummaryBar } from '../../src/components/pos/CartSummaryBar';
 import { CategoryChip } from '../../src/components/pos/CategoryChip';
@@ -16,6 +17,7 @@ import { getMobilePosCatalog, mapMobilePosCatalogItemToPosProduct, mergeCatalogP
 import { colors, radii, spacing } from '../../src/theme';
 import type { MobilePosCatalogItem, MobilePosCategory, MobilePosPagination } from '../../src/types/mobilePosCatalog';
 import type { PosProduct } from '../../src/types/pos';
+import { decideCheckoutNavigation } from '../../src/utils/posCart';
 
 const ALL_CATEGORY = { id: null, name: 'Todos' } as const;
 const PER_PAGE = 30;
@@ -52,6 +54,8 @@ export default function PosScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [cartVisible, setCartVisible] = useState(false);
   const [message, setMessage] = useState('');
+  const pendingCheckoutRef = useRef(false);
+  const checkoutNavigatingRef = useRef(false);
   const requestSeq = useRef(0);
   const mounted = useRef(true);
   const abortRef = useRef<AbortController | null>(null);
@@ -69,6 +73,17 @@ export default function PosScreen() {
       abortRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (!cartVisible && pendingCheckoutRef.current) {
+      pendingCheckoutRef.current = false;
+      router.push('/pos/checkout');
+    }
+  }, [cartVisible]);
+
+  useFocusEffect(useCallback(() => {
+    checkoutNavigatingRef.current = false;
+  }, []));
 
   useEffect(() => {
     itemsRef.current = items;
@@ -166,9 +181,9 @@ export default function PosScreen() {
     void loadCatalog({ page: 1, mode: 'replace' });
   }, [categoryId, debouncedSearch, inventoryLocationId, loadCatalog]);
 
-  const showMessage = (nextMessage: string) => {
+  const showMessage = useCallback((nextMessage: string) => {
     setMessage(nextMessage);
-  };
+  }, []);
 
   const handleRetry = () => {
     void loadCatalog({ page: 1, mode: 'replace' });
@@ -183,7 +198,7 @@ export default function PosScreen() {
     void loadCatalog({ page: pagination.page + 1, mode: 'append' });
   };
 
-  const handleAddProduct = (product: PosProduct) => {
+  const handleAddProduct = useCallback((product: PosProduct) => {
     if (product.canSell === false) {
       showMessage(product.sellabilityReason ?? 'Este producto no puede venderse.');
       return;
@@ -194,10 +209,27 @@ export default function PosScreen() {
       return;
     }
     addProduct(product);
-  };
+    showMessage(`${product.name} agregado al carrito`);
+  }, [addProduct, cartItems, showMessage]);
+
+  const handleCheckoutFromCart = useCallback(() => {
+    const decision = decideCheckoutNavigation({ cartVisible, navigating: checkoutNavigatingRef.current });
+    if (decision === 'ignore') return;
+    checkoutNavigatingRef.current = true;
+    if (decision === 'close_then_navigate') {
+      pendingCheckoutRef.current = true;
+      setCartVisible(false);
+    } else {
+      router.push('/pos/checkout');
+    }
+  }, [cartVisible]);
+
+  const renderProduct = useCallback(({ item }: { item: PosProduct }) => (
+    <View style={styles.productSlot}><ProductCard product={item} onPress={() => handleAddProduct(item)} style={styles.productCard} /></View>
+  ), [handleAddProduct]);
 
   const renderHeader = () => (
-    <>
+    <FadeInView distance={6}>
       <PosHeader onOptionsPress={() => showMessage('Opciones del POS estarán disponibles próximamente.')} />
       <PosSearchBar value={search} onChangeText={setSearch} onScanPress={() => router.push('/pos/scanner')} />
       <FlatList
@@ -212,7 +244,7 @@ export default function PosScreen() {
         <Text style={styles.productsTitle}>Productos</Text>
         {loadingSearch && <ActivityIndicator size="small" color={colors.brand} />}
       </View>
-    </>
+    </FadeInView>
   );
 
   const renderEmpty = () => {
@@ -228,7 +260,7 @@ export default function PosScreen() {
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={styles.productRow}
-        renderItem={({ item }) => <ProductCard product={item} onPress={() => handleAddProduct(item)} />}
+        renderItem={renderProduct}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={loadingMore ? <View style={styles.footerSpinner}><ActivityIndicator color={colors.brand} /></View> : null}
@@ -239,9 +271,9 @@ export default function PosScreen() {
         onEndReachedThreshold={0.35}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
       />
-      {message.length > 0 && <Pressable accessibilityLabel="Cerrar mensaje" accessibilityRole="button" onPress={() => setMessage('')} style={[styles.snackbar, { bottom: 136 + insets.bottom }]}><Text style={styles.messageText}>{message}</Text><Text style={styles.messageClose}>Cerrar</Text></Pressable>}
-      <CartSummaryBar itemCount={itemCount} totalCents={totalCents} onViewCart={() => setCartVisible(true)} onCheckout={() => router.push('/pos/checkout')} />
-      <CartSheet visible={cartVisible} items={cartItems} subtotalCents={subtotalCents} discountCents={discountCents} taxCents={taxCents} totalCents={totalCents} onClose={() => setCartVisible(false)} onIncrease={increase} onDecrease={decrease} onRemove={remove} onCheckout={() => router.push('/pos/checkout')} />
+      {message.length > 0 && <FadeInView distance={8} style={[styles.snackbarWrap, { bottom: 136 + insets.bottom }]}><PressableScale accessibilityLabel="Cerrar mensaje" accessibilityRole="button" onPress={() => setMessage('')} style={styles.snackbar}><Text style={styles.messageText}>{message}</Text><Text style={styles.messageClose}>Cerrar</Text></PressableScale></FadeInView>}
+      <CartSummaryBar itemCount={itemCount} totalCents={totalCents} onViewCart={() => setCartVisible(true)} onCheckout={handleCheckoutFromCart} />
+      <CartSheet visible={cartVisible} items={cartItems} subtotalCents={subtotalCents} discountCents={discountCents} taxCents={taxCents} totalCents={totalCents} onClose={() => setCartVisible(false)} onIncrease={increase} onDecrease={decrease} onRemove={remove} onCheckout={handleCheckoutFromCart} />
     </SafeAreaView>
   );
 }
@@ -253,8 +285,11 @@ const styles = StyleSheet.create({
   titleRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md, marginBottom: spacing.sm },
   productsTitle: { color: colors.ink, fontSize: 16, fontWeight: '800' },
   productRow: { justifyContent: 'space-between', marginBottom: spacing.md },
+  productSlot: { width: '48%' },
+  productCard: { width: '100%' },
   footerSpinner: { paddingVertical: spacing.lg },
-  snackbar: { position: 'absolute', left: spacing.md, right: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.sm, backgroundColor: colors.blueSoft, zIndex: 20 },
+  snackbarWrap: { position: 'absolute', left: spacing.md, right: spacing.md, zIndex: 20 },
+  snackbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.sm, backgroundColor: colors.blueSoft },
   messageText: { flex: 1, color: colors.ink, fontSize: 12, lineHeight: 17 },
   messageClose: { marginLeft: spacing.sm, color: colors.blue, fontSize: 11, fontWeight: '800' },
   emptyProducts: { alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },

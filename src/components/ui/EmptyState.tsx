@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, sizing, spacing, typography } from '../../theme';
+import { FadeInView, PressableScale } from '../motion';
+import { colors, fontWeights, radii, sizing, spacing, typography } from '../../theme';
 
 type Props = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -14,22 +15,21 @@ type Props = {
 
 export function EmptyState({ icon, title, message, actionLabel, onAction, compact = false }: Props) {
   return (
-    <View style={[styles.wrap, compact && styles.compact]}>
-      <View style={styles.icon}><Ionicons name={icon} size={compact ? 22 : 28} color={colors.brand} /></View>
+    <FadeInView style={[styles.wrap, compact && styles.compact]} distance={6}>
+      <View style={styles.icon}><Ionicons name={icon} size={compact ? 22 : 28} color={colors.inkMuted} /></View>
       <Text style={styles.title}>{title}</Text>
       {message ? <Text style={styles.message}>{message}</Text> : null}
-      {actionLabel && onAction ? <Pressable accessibilityLabel={actionLabel} accessibilityRole="button" onPress={onAction} style={({ pressed }) => [styles.action, pressed && styles.pressed]}><Text style={styles.actionText}>{actionLabel}</Text></Pressable> : null}
-    </View>
+      {actionLabel && onAction ? <PressableScale accessibilityLabel={actionLabel} accessibilityRole="button" onPress={onAction} style={styles.action}><Text style={styles.actionText}>{actionLabel}</Text></PressableScale> : null}
+    </FadeInView>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', paddingHorizontal: spacing.xl, paddingVertical: spacing.xxl },
   compact: { paddingVertical: spacing.xl },
-  icon: { width: 56, height: 56, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
-  title: { marginTop: spacing.md, color: colors.ink, fontSize: typography.subtitle, fontWeight: '800', textAlign: 'center' },
+  icon: { width: 56, height: 56, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas, borderWidth: 1, borderColor: colors.line },
+  title: { marginTop: spacing.md, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold, textAlign: 'center' },
   message: { maxWidth: 300, marginTop: spacing.xs, color: colors.inkMuted, fontSize: typography.caption, lineHeight: 18, textAlign: 'center' },
   action: { minHeight: sizing.touch, marginTop: spacing.md, paddingHorizontal: spacing.lg, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  actionText: { color: colors.white, fontSize: typography.button, fontWeight: '800' },
-  pressed: { opacity: 0.75 },
+  actionText: { color: colors.white, fontSize: typography.button, fontWeight: fontWeights.semibold },
 });

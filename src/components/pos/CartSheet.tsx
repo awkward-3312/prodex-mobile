@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radii, spacing, typography } from '../../theme';
+import { FadeInView, PressableScale } from '../motion';
+import { colors, motion, radii, spacing, typography } from '../../theme';
 import type { CartItem } from '../../types/pos';
 import { formatMinorUnits } from '../../utils/formatCurrency';
 import { CartItemRow } from './CartItemRow';
@@ -15,20 +16,22 @@ export function CartSheet({ visible, items, subtotalCents, discountCents, taxCen
   const hasItems = items.length > 0;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable accessibilityLabel="Cerrar carrito" accessibilityRole="button" onPress={onClose} style={styles.backdrop} />
-        <SafeAreaView edges={[]} style={[styles.sheet, { maxHeight: height * 0.8, paddingBottom: insets.bottom + spacing.md }]}>
+        <FadeInView distance={18} duration={motion.duration.slow} style={[styles.sheetWrap, { height: height * 0.8 }]}>
+        <SafeAreaView edges={[]} style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]}>
           <View style={styles.handle} />
-          <View style={styles.header}><View><Text style={styles.title}>Carrito actual</Text><Text style={styles.customerLabel}>Cliente</Text><Text style={styles.customer}>Por definir</Text></View><Pressable accessibilityLabel="Cerrar carrito" accessibilityRole="button" onPress={onClose} style={styles.close}><Ionicons name="close" size={21} color={colors.ink} /></Pressable></View>
+          <View style={styles.header}><View><Text style={styles.title}>Carrito actual</Text><Text style={styles.customerLabel}>Cliente</Text><Text style={styles.customer}>Por definir</Text></View><PressableScale accessibilityLabel="Cerrar carrito" accessibilityRole="button" onPress={onClose} style={styles.close}><Ionicons name="close" size={21} color={colors.ink} /></PressableScale></View>
           <View style={styles.customerAction}><Text style={styles.customerHint}>Se selecciona al cobrar la venta</Text></View>
           <Text style={styles.productsTitle}>Productos</Text>
           <ScrollView style={styles.items} contentContainerStyle={styles.itemsContent} showsVerticalScrollIndicator={false}>
             {hasItems ? items.map((item) => <CartItemRow key={item.product.id} item={item} onIncrease={() => onIncrease(item.product.id)} onDecrease={() => onDecrease(item.product.id)} onRemove={() => onRemove(item.product.id)} />) : <Text style={styles.empty}>Agrega productos para comenzar la venta.</Text>}
           </ScrollView>
           <View style={styles.totals}><View style={styles.totalLine}><Text style={styles.muted}>Subtotal estimado</Text><Text style={styles.lineValue}>{formatMinorUnits(subtotalCents)}</Text></View><View style={styles.totalLine}><Text style={styles.muted}>Descuento</Text><Text style={styles.lineValue}>{formatMinorUnits(discountCents)}</Text></View><View style={styles.totalLine}><Text style={styles.muted}>Impuestos</Text><Text style={styles.lineValue}>{taxCents > 0 ? formatMinorUnits(taxCents) : 'Pendiente'}</Text></View><View style={styles.grandLine}><Text style={styles.grandLabel}>Estimado</Text><Text style={styles.grandValue}>{formatMinorUnits(totalCents)}</Text></View></View>
-          <Pressable accessibilityLabel="Cobrar venta" accessibilityRole="button" accessibilityState={{ disabled: !hasItems }} disabled={!hasItems} onPress={onCheckout} style={({ pressed }) => [styles.checkout, !hasItems && styles.disabled, pressed && styles.pressed]}><Text style={styles.checkoutText}>Cobrar</Text></Pressable>
+          <PressableScale accessibilityLabel="Cobrar venta" accessibilityRole="button" accessibilityState={{ disabled: !hasItems }} disabled={!hasItems} onPress={onCheckout} scaleTo={motion.pressScalePrimary} style={[styles.checkout, !hasItems && styles.disabled]}><Text style={styles.checkoutText}>Cobrar</Text></PressableScale>
         </SafeAreaView>
+        </FadeInView>
       </View>
     </Modal>
   );
@@ -37,6 +40,7 @@ export function CartSheet({ visible, items, subtotalCents, discountCents, taxCen
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(23, 50, 77, 0.38)' },
+  sheetWrap: { width: '100%' },
   sheet: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg, backgroundColor: colors.surface },
   handle: { alignSelf: 'center', width: 38, height: 4, marginBottom: spacing.md, borderRadius: radii.pill, backgroundColor: colors.line },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
@@ -61,5 +65,4 @@ const styles = StyleSheet.create({
   checkout: { minHeight: 48, marginTop: spacing.md, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
   checkoutText: { color: colors.white, fontSize: 14, fontWeight: '800' },
   disabled: { opacity: 0.45 },
-  pressed: { opacity: 0.75 },
 });

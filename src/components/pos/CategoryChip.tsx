@@ -1,21 +1,21 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
-import { colors, radii, spacing, typography } from '../../theme';
+import { PressableScale } from '../motion';
+import { colors, fontWeights, radii, spacing, typography } from '../../theme';
 
 type Props = { label: string; selected: boolean; onPress: () => void };
 
 export function CategoryChip({ label, selected, onPress }: Props) {
   return (
-    <Pressable accessibilityLabel={`Filtrar por ${label}`} accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={({ pressed }) => [styles.chip, selected && styles.selected, pressed && styles.pressed]}>
+    <PressableScale accessibilityLabel={`Filtrar por ${label}`} accessibilityRole="button" accessibilityState={{ selected }} hitSlop={{ top: 4, bottom: 4 }} onPress={onPress} style={[styles.chip, selected && styles.selected]}>
       <Text style={[styles.label, selected && styles.selectedLabel]}>{label}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   chip: { minHeight: 36, paddingHorizontal: spacing.md, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   selected: { backgroundColor: colors.brand, borderColor: colors.brand },
-  label: { color: colors.inkMuted, fontSize: typography.caption, fontWeight: '800' },
+  label: { color: colors.inkMuted, fontSize: typography.caption, fontWeight: fontWeights.semibold },
   selectedLabel: { color: colors.white },
-  pressed: { opacity: 0.75 },
 });

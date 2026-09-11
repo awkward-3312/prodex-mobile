@@ -48,6 +48,14 @@ export const typography = {
   label: 11,
 } as const;
 
+export const fontWeights = {
+  regular: '400',
+  medium: '500',
+  semibold: '600',
+  bold: '700',
+  heavy: '800',
+} as const;
+
 export const shadows = {
   card: {
     shadowColor: '#17324D',
@@ -63,6 +71,21 @@ export const sizing = {
   input: 48,
   button: 48,
   iconButton: 44,
+} as const;
+
+export const motion = {
+  duration: {
+    fast: 140,
+    normal: 210,
+    slow: 280,
+  },
+  pressScale: 0.98,
+  pressScalePrimary: 0.99,
+  spring: {
+    damping: 18,
+    stiffness: 260,
+    mass: 0.7,
+  },
 } as const;
 
 export const surfaces = {

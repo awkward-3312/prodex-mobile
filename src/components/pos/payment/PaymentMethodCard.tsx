@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing, typography } from '../../../theme';
+import { PressableScale } from '../../motion';
+import { colors, fontWeights, radii, spacing, typography } from '../../../theme';
 import type { CheckoutPaymentMethod } from '../../../types/mobilePosCheckout';
 
 type PaymentOption = CheckoutPaymentMethod | { id: 'mixed'; name: string; type: 'mixed'; is_cash: false; is_card: false };
@@ -29,12 +30,11 @@ export function displayPaymentMethodName(method: PaymentOption) {
 export function PaymentMethodCard({ method, selected, onPress }: Props) {
   const option = methodStyle(method);
   const label = displayPaymentMethodName(method);
-  return <Pressable accessibilityLabel={`Método de pago ${label}`} accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} style={({ pressed }) => [styles.card, { backgroundColor: selected ? option.background : colors.surface, borderColor: selected ? option.color : colors.line }, pressed && styles.pressed]}><View style={[styles.icon, { backgroundColor: selected ? colors.surface : option.background }]}><Ionicons name={option.icon} size={22} color={option.color} /></View><Text style={[styles.label, selected && { color: option.color }]}>{label}</Text>{selected && <Ionicons name="checkmark-circle" size={17} color={option.color} />}</Pressable>;
+  return <PressableScale accessibilityLabel={`Método de pago ${label}`} accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} style={[styles.card, { backgroundColor: selected ? option.background : colors.surface, borderColor: selected ? option.color : colors.line }]}><View style={[styles.icon, { backgroundColor: selected ? colors.surface : option.background }]}><Ionicons name={option.icon} size={22} color={option.color} /></View><Text style={[styles.label, selected && { color: option.color }]}>{label}</Text>{selected && <Ionicons name="checkmark-circle" size={17} color={option.color} />}</PressableScale>;
 }
 
 const styles = StyleSheet.create({
   card: { width: '48%', minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderWidth: 1, borderRadius: radii.sm },
   icon: { width: 32, height: 32, borderRadius: radii.xs, alignItems: 'center', justifyContent: 'center' },
-  label: { flex: 1, color: colors.ink, fontSize: typography.caption, fontWeight: '800' },
-  pressed: { opacity: 0.75 },
+  label: { flex: 1, color: colors.ink, fontSize: typography.caption, fontWeight: fontWeights.semibold },
 });

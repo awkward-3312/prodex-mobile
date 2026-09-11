@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { PressableScale } from './motion';
 import { colors, radii, spacing } from '../theme';
 
 type Props = {
@@ -13,23 +14,22 @@ type Props = {
 
 export function QuickAction({ label, icon, color, backgroundColor, onPress }: Props) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityLabel={label}
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.action, { backgroundColor }, pressed && styles.pressed]}
+      style={[styles.action, { backgroundColor }]}
     >
       <View style={[styles.iconWrap, { backgroundColor: colors.surface }]}>
         <Ionicons name={icon} size={25} color={color} />
       </View>
       <Text style={styles.label}>{label}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   action: { width: '48%', minHeight: 76, padding: spacing.md, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
   iconWrap: { width: 40, height: 40, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
   label: { color: colors.ink, fontSize: 13, fontWeight: '700', textAlign: 'center' },
 });
