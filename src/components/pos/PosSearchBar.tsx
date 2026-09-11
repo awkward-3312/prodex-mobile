@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { colors, radii, spacing } from '../../theme';
+import { colors, radii, sizing, spacing, surfaces, typography } from '../../theme';
 
 type Props = {
   value: string;
@@ -26,9 +26,9 @@ export function PosSearchBar({ value, onChangeText, onScanPress }: Props) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  searchBox: { flex: 1, minHeight: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, gap: spacing.sm, borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
-  input: { flex: 1, minHeight: 44, color: colors.ink, fontSize: 13 },
-  clear: { width: 32, height: 44, alignItems: 'center', justifyContent: 'center' },
-  scan: { width: 52, height: 52, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft, borderWidth: 1, borderColor: colors.brandSoft },
+  searchBox: { ...surfaces.input, flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, gap: spacing.sm },
+  input: { flex: 1, minHeight: sizing.touch, color: colors.ink, fontSize: typography.body },
+  clear: { width: 32, height: sizing.touch, alignItems: 'center', justifyContent: 'center' },
+  scan: { width: sizing.input, height: sizing.input, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft, borderWidth: 1, borderColor: colors.brandSoft },
   pressed: { opacity: 0.7 },
 });

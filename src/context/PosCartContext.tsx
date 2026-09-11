@@ -1,8 +1,7 @@
 import { createContext, useContext, useReducer } from 'react';
 
-import { posTaxConfig } from '../config/posMockData';
 import type { CartItem, PosProduct } from '../types/pos';
-import { calculateTaxMinorUnits, toMinorUnits } from '../utils/formatCurrency';
+import { toMinorUnits } from '../utils/formatCurrency';
 import { getCartItemCount, getCartSubtotal, normalizeCartQuantity } from '../utils/posCart';
 
 type CartState = { items: CartItem[] };
@@ -69,7 +68,7 @@ export function PosCartProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const subtotalCents = getCartSubtotal(state.items);
   const discountCents = 0;
-  const taxCents = calculateTaxMinorUnits(subtotalCents - discountCents, posTaxConfig.rate);
+  const taxCents = 0;
 
   const value: PosCartValue = {
     items: state.items,
@@ -77,7 +76,7 @@ export function PosCartProvider({ children }: { children: React.ReactNode }) {
     subtotalCents,
     discountCents,
     taxCents,
-    totalCents: subtotalCents - discountCents + taxCents,
+    totalCents: subtotalCents - discountCents,
     addProduct: (product, quantity = 1) => dispatch({ type: 'add', product, quantity }),
     increase: (productId) => dispatch({ type: 'increase', productId }),
     decrease: (productId) => dispatch({ type: 'decrease', productId }),

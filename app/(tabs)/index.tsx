@@ -6,6 +6,7 @@ import { MetricCard } from '../../src/components/MetricCard';
 import { QuickAction } from '../../src/components/QuickAction';
 import { RecentSaleRow } from '../../src/components/RecentSaleRow';
 import { TodaySalesCard } from '../../src/components/TodaySalesCard';
+import { AppHeader } from '../../src/components/ui/AppHeader';
 import { appConfig } from '../../src/config/app';
 import { dashboardMetrics, recentSales, todaySales } from '../../src/config/mockData';
 import { colors, radii, shadows, spacing, typography } from '../../src/theme';
@@ -17,34 +18,25 @@ export default function DashboardScreen() {
   const notificationLabel = hasNotifications
     ? `Notificaciones, ${pendingNotifications} pendientes`
     : 'Notificaciones, sin pendientes';
-  const notificationBadge = pendingNotifications > 9 ? '9+' : String(pendingNotifications);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.headerCopy}>
-            <Text style={styles.greeting}>Buenos días, Carlos</Text>
-            <Pressable
-              accessibilityLabel={`Cambiar ubicación activa: ${appConfig.companyName}, ${appConfig.activeLocation}`}
-              accessibilityRole="button"
-              style={styles.locationSelector}
-            >
-              <View style={styles.locationCopy}>
-                <Text style={styles.company}>{appConfig.companyName}</Text>
-                <View style={styles.locationLine}>
-                  <Ionicons name="business-outline" size={14} color={colors.brand} />
-                  <Text style={styles.location} numberOfLines={1}>{appConfig.activeLocation}</Text>
-                  <Ionicons name="chevron-down" size={15} color={colors.inkMuted} />
-                </View>
-              </View>
-            </Pressable>
+        <AppHeader title="Inicio" subtitle="Buenos días, Carlos" icon="home-outline" action={{ label: notificationLabel, icon: 'notifications-outline', onPress: () => undefined, tone: hasNotifications ? 'warning' : 'default' }} />
+        <Pressable
+          accessibilityLabel={`Cambiar ubicación activa: ${appConfig.companyName}, ${appConfig.activeLocation}`}
+          accessibilityRole="button"
+          style={styles.locationSelector}
+        >
+          <View style={styles.locationCopy}>
+            <Text style={styles.company}>{appConfig.companyName}</Text>
+            <View style={styles.locationLine}>
+              <Ionicons name="business-outline" size={14} color={colors.brand} />
+              <Text style={styles.location} numberOfLines={1}>{appConfig.activeLocation}</Text>
+              <Ionicons name="chevron-down" size={15} color={colors.inkMuted} />
+            </View>
           </View>
-          <Pressable accessibilityLabel={notificationLabel} accessibilityRole="button" style={[styles.notificationButton, hasNotifications && styles.notificationButtonActive]}>
-            <Ionicons name="notifications-outline" size={22} color={hasNotifications ? colors.amber : colors.inkMuted} />
-            {hasNotifications && <View style={styles.notificationBadge}><Text style={styles.notificationBadgeText}>{notificationBadge}</Text></View>}
-          </Pressable>
-        </View>
+        </Pressable>
 
         <TodaySalesCard {...todaySales} />
 
@@ -85,13 +77,6 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: spacing.md, paddingBottom: spacing.md },
-  headerCopy: { flex: 1, paddingRight: spacing.md },
-  greeting: { color: colors.ink, fontSize: typography.title, fontWeight: '800' },
-  notificationButton: { width: 44, height: 44, borderRadius: radii.md, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...shadows.card },
-  notificationButtonActive: { backgroundColor: colors.amberSoft },
-  notificationBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: radii.pill, backgroundColor: colors.red, borderWidth: 1.5, borderColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
-  notificationBadgeText: { color: colors.white, fontSize: 10, fontWeight: '800', lineHeight: 13 },
   locationSelector: { width: '100%', marginTop: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderRadius: radii.sm, backgroundColor: colors.brandSoft },
   locationCopy: {},
   company: { color: colors.ink, fontSize: 13, fontWeight: '800', lineHeight: 18 },

@@ -9,6 +9,7 @@ import { CategoryChip } from '../../src/components/pos/CategoryChip';
 import { PosHeader } from '../../src/components/pos/PosHeader';
 import { PosSearchBar } from '../../src/components/pos/PosSearchBar';
 import { ProductCard } from '../../src/components/pos/ProductCard';
+import { EmptyState } from '../../src/components/ui/EmptyState';
 import { useAuth } from '../../src/context/AuthContext';
 import { canAddProductQuantity, usePosCart } from '../../src/context/PosCartContext';
 import { getMobilePosCatalog, mapMobilePosCatalogItemToPosProduct, mergeCatalogPages, MobilePosCatalogError } from '../../src/services/pos/mobilePosCatalogService';
@@ -216,8 +217,8 @@ export default function PosScreen() {
 
   const renderEmpty = () => {
     if (loadingInitial) return <View style={styles.emptyProducts}><ActivityIndicator color={colors.brand} /><Text style={styles.emptyText}>Cargando productos...</Text></View>;
-    if (errorMessage) return <View style={styles.emptyProducts}><Text style={styles.emptyTitle}>{errorMessage}</Text><Pressable accessibilityLabel="Reintentar carga de productos" accessibilityRole="button" onPress={handleRetry} style={styles.retryButton}><Text style={styles.retryText}>Reintentar</Text></Pressable></View>;
-    return <View style={styles.emptyProducts}><Text style={styles.emptyTitle}>{emptyMessage(debouncedSearch, categoryId)}</Text></View>;
+    if (errorMessage) return <EmptyState icon="cloud-offline-outline" title={errorMessage} actionLabel="Reintentar" onAction={handleRetry} compact />;
+    return <EmptyState icon="cube-outline" title={emptyMessage(debouncedSearch, categoryId)} compact />;
   };
 
   return (
@@ -259,6 +260,4 @@ const styles = StyleSheet.create({
   emptyProducts: { alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
   emptyTitle: { color: colors.ink, fontSize: 15, fontWeight: '800', textAlign: 'center' },
   emptyText: { marginTop: spacing.sm, color: colors.inkMuted, fontSize: 12, textAlign: 'center' },
-  retryButton: { minHeight: 44, marginTop: spacing.md, paddingHorizontal: spacing.lg, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  retryText: { color: colors.white, fontSize: 13, fontWeight: '800' },
 });

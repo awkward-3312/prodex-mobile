@@ -30,9 +30,10 @@ export const spacing = {
 } as const;
 
 export const radii = {
+  xs: 8,
   sm: 10,
-  md: 16,
-  lg: 22,
+  md: 14,
+  lg: 18,
   pill: 999,
 } as const;
 
@@ -43,6 +44,8 @@ export const typography = {
   body: 14,
   caption: 12,
   metric: 24,
+  button: 13,
+  label: 11,
 } as const;
 
 export const shadows = {
@@ -52,6 +55,35 @@ export const shadows = {
     shadowOpacity: 0.07,
     shadowRadius: 14,
     elevation: 3,
+  },
+} as const;
+
+export const sizing = {
+  touch: 44,
+  input: 48,
+  button: 48,
+  iconButton: 44,
+} as const;
+
+export const surfaces = {
+  card: {
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  compactCard: {
+    borderRadius: radii.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  input: {
+    minHeight: sizing.input,
+    borderRadius: radii.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
 } as const;
 

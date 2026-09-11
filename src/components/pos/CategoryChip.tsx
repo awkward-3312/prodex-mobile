@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { colors, radii, spacing } from '../../theme';
+import { colors, radii, spacing, typography } from '../../theme';
 
 type Props = { label: string; selected: boolean; onPress: () => void };
 
@@ -13,9 +13,9 @@ export function CategoryChip({ label, selected, onPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  chip: { minHeight: 40, paddingHorizontal: spacing.md, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  chip: { minHeight: 36, paddingHorizontal: spacing.md, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   selected: { backgroundColor: colors.brand, borderColor: colors.brand },
-  label: { color: colors.inkMuted, fontSize: 13, fontWeight: '700' },
+  label: { color: colors.inkMuted, fontSize: typography.caption, fontWeight: '800' },
   selectedLabel: { color: colors.white },
   pressed: { opacity: 0.75 },
 });

@@ -1,4 +1,5 @@
 import { appConfig } from '../config/app';
+import type { CheckoutCurrency } from '../types/mobilePosCheckout';
 
 type CurrencyConfig = typeof appConfig.currency;
 
@@ -51,6 +52,16 @@ export function parseMinorUnits(value: string) {
 
 export function formatMinorUnits(value: number, currency: CurrencyConfig = appConfig.currency) {
   return formatCurrency(value / 100, currency);
+}
+
+export function formatCheckoutMinorUnits(value: number, currency?: CheckoutCurrency) {
+  if (!currency) return formatMinorUnits(value);
+  const decimals = Math.max(0, currency.price_decimals);
+  const amount = (Math.round(value) / 100).toLocaleString(currency.locale ?? appConfig.currency.locale, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  return `${currency.symbol} ${amount}`;
 }
 
 export function calculateTaxMinorUnits(subtotalCents: number, rate: number) {

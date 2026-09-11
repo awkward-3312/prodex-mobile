@@ -1,28 +1,40 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing } from '../../../theme';
-import type { PaymentMethod } from '../../../types/pos';
+import { colors, radii, spacing, typography } from '../../../theme';
+import type { CheckoutPaymentMethod } from '../../../types/mobilePosCheckout';
 
-type Props = { method: PaymentMethod; selected: boolean; onPress: () => void };
+type PaymentOption = CheckoutPaymentMethod | { id: 'mixed'; name: string; type: 'mixed'; is_cash: false; is_card: false };
+type Props = { method: PaymentOption; selected: boolean; onPress: () => void };
 
-const methods: Record<PaymentMethod, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string; background: string }> = {
-  cash: { label: 'Efectivo', icon: 'cash-outline', color: colors.brand, background: colors.brandSoft },
-  card: { label: 'Tarjeta', icon: 'card-outline', color: colors.blue, background: colors.blueSoft },
-  transfer: { label: 'Transferencia', icon: 'swap-horizontal-outline', color: colors.teal, background: colors.tealSoft },
-  mixed: { label: 'Pago mixto', icon: 'git-compare-outline', color: colors.purple, background: colors.purpleSoft },
-};
-
-export function PaymentMethodCard({ method, selected, onPress }: Props) {
-  const option = methods[method];
-  return <Pressable accessibilityLabel={`Método de pago ${option.label}`} accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} style={({ pressed }) => [styles.card, { backgroundColor: selected ? option.background : colors.surface, borderColor: selected ? option.color : colors.line }, pressed && styles.pressed]}><View style={[styles.icon, { backgroundColor: selected ? colors.surface : option.background }]}><Ionicons name={option.icon} size={22} color={option.color} /></View><Text style={[styles.label, selected && { color: option.color }]}>{option.label}</Text>{selected && <Ionicons name="checkmark-circle" size={17} color={option.color} />}</Pressable>;
+function methodStyle(method: PaymentOption): { icon: keyof typeof Ionicons.glyphMap; color: string; background: string } {
+  if (method.id === 'mixed') return { icon: 'git-compare-outline', color: colors.purple, background: colors.purpleSoft };
+  if (method.is_cash) return { icon: 'cash-outline', color: colors.brand, background: colors.brandSoft };
+  if (method.is_card) return { icon: 'card-outline', color: colors.blue, background: colors.blueSoft };
+  return { icon: 'swap-horizontal-outline', color: colors.teal, background: colors.tealSoft };
 }
 
-export function paymentMethodLabel(method: PaymentMethod) { return methods[method].label; }
+export function displayPaymentMethodName(method: PaymentOption) {
+  if (method.id === 'mixed') return method.name;
+  const normalized = method.name.trim().toLowerCase();
+  if (normalized === 'tpe' || normalized === 'western union') return method.name;
+  if (normalized === 'cash') return 'Efectivo';
+  if (normalized === 'bank transfer') return 'Transferencia bancaria';
+  if (normalized === 'check') return 'Cheque';
+  if (normalized === 'credit card') return 'Tarjeta de crédito';
+  if (normalized === 'other') return 'Otro';
+  return method.name;
+}
+
+export function PaymentMethodCard({ method, selected, onPress }: Props) {
+  const option = methodStyle(method);
+  const label = displayPaymentMethodName(method);
+  return <Pressable accessibilityLabel={`Método de pago ${label}`} accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} style={({ pressed }) => [styles.card, { backgroundColor: selected ? option.background : colors.surface, borderColor: selected ? option.color : colors.line }, pressed && styles.pressed]}><View style={[styles.icon, { backgroundColor: selected ? colors.surface : option.background }]}><Ionicons name={option.icon} size={22} color={option.color} /></View><Text style={[styles.label, selected && { color: option.color }]}>{label}</Text>{selected && <Ionicons name="checkmark-circle" size={17} color={option.color} />}</Pressable>;
+}
 
 const styles = StyleSheet.create({
-  card: { width: '48%', minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderWidth: 1, borderRadius: radii.md },
-  icon: { width: 38, height: 38, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
-  label: { flex: 1, color: colors.ink, fontSize: 12, fontWeight: '800' },
+  card: { width: '48%', minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderWidth: 1, borderRadius: radii.sm },
+  icon: { width: 32, height: 32, borderRadius: radii.xs, alignItems: 'center', justifyContent: 'center' },
+  label: { flex: 1, color: colors.ink, fontSize: typography.caption, fontWeight: '800' },
   pressed: { opacity: 0.75 },
 });
