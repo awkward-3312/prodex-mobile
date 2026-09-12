@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import type { BarcodeType } from 'expo-camera';
 import * as Linking from 'expo-linking';
@@ -7,7 +8,6 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FadeInView, PressableScale } from '../../src/components/motion';
-import { appConfig } from '../../src/config/app';
 import { usePosCart } from '../../src/context/PosCartContext';
 import { useAuth } from '../../src/context/AuthContext';
 import { colors, fontWeights, radii, sizing, spacing, typography } from '../../src/theme';
@@ -95,28 +95,27 @@ export default function ScannerScreen() {
     return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><FadeInView style={styles.center}><Text style={styles.title}>Acceso a la cámara</Text><Text style={styles.description}>PRODEX necesita acceso a la cámara para escanear códigos de barras de productos.</Text><PressableScale accessibilityLabel="Permitir acceso a la cámara" accessibilityRole="button" onPress={requestPermission} style={styles.primary}><Text style={styles.primaryText}>Reintentar permiso</Text></PressableScale>{!permission.canAskAgain && <PressableScale accessibilityLabel="Abrir configuración de cámara" accessibilityRole="button" onPress={() => Linking.openSettings()} style={styles.secondary}><Text style={styles.secondaryText}>Abrir configuración</Text></PressableScale>}<PressableScale accessibilityLabel="Volver al POS" accessibilityRole="button" onPress={() => router.back()} style={styles.closeText}><Text style={styles.closeTextLabel}>Volver al POS</Text></PressableScale></FadeInView></SafeAreaView>;
   }
 
-  return <View style={styles.cameraScreen}><CameraView facing="back" enableTorch={torchEnabled} onMountError={() => setCameraError(true)} onBarcodeScanned={isProcessingScan ? undefined : ({ data, type }) => { void processBarcode(data, type); }} barcodeScannerSettings={{ barcodeTypes }} style={StyleSheet.absoluteFill} /><SafeAreaView style={styles.overlay} edges={['top', 'bottom']}><View style={styles.topBar}><PressableScale accessibilityLabel="Cerrar escáner" accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}><Text style={styles.backGlyph}>‹</Text></PressableScale><View><Text style={styles.cameraTitle}>Escanear producto</Text><Text style={styles.location}>{appConfig.activeLocation}</Text></View><View style={styles.topSpacer} /></View><View style={styles.scannerArea}><View style={styles.frame}><View style={[styles.corner, styles.cornerTopLeft]} /><View style={[styles.corner, styles.cornerTopRight]} /><View style={[styles.corner, styles.cornerBottomLeft]} /><View style={[styles.corner, styles.cornerBottomRight]} /></View><Text style={styles.instruction}>Coloca el código de barras dentro del marco</Text></View><View style={styles.bottomControls}>{cameraError && <FadeInView><Text style={styles.cameraError}>La cámara no está disponible.</Text></FadeInView>}{feedback && <FadeInView style={[styles.feedback, feedback.tone === 'error' && styles.feedbackError]}><Text style={styles.feedbackTitle}>{feedback.title}</Text>{feedback.detail && <Text style={styles.feedbackDetail}>{feedback.detail}</Text>}{feedback.tone === 'error' && <PressableScale accessibilityLabel="Escanear nuevamente" accessibilityRole="button" onPress={retryScan} style={styles.retry}><Text style={styles.retryText}>Escanear nuevamente</Text></PressableScale>}</FadeInView>}<PressableScale accessibilityLabel={torchEnabled ? 'Apagar linterna' : 'Encender linterna'} accessibilityRole="button" onPress={() => setTorchEnabled((current) => !current)} style={styles.torch}><Text style={styles.torchText}>{torchEnabled ? 'Apagar linterna' : 'Linterna'}</Text></PressableScale></View></SafeAreaView></View>;
+  return <View style={styles.cameraScreen}><CameraView facing="back" enableTorch={torchEnabled} onMountError={() => setCameraError(true)} onBarcodeScanned={isProcessingScan ? undefined : ({ data, type }) => { void processBarcode(data, type); }} barcodeScannerSettings={{ barcodeTypes }} style={StyleSheet.absoluteFill} /><SafeAreaView style={styles.overlay} edges={['top', 'bottom']}><View style={styles.topBar}><PressableScale accessibilityLabel="Cerrar escáner" accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}><Ionicons name="arrow-back" size={21} color={colors.ink} /></PressableScale><View><Text style={styles.cameraTitle}>Escanear producto</Text><Text style={styles.location}>Apunta al código del producto</Text></View><View style={styles.topSpacer} /></View><View style={styles.scannerArea}><View style={styles.frame}><View style={[styles.corner, styles.cornerTopLeft]} /><View style={[styles.corner, styles.cornerTopRight]} /><View style={[styles.corner, styles.cornerBottomLeft]} /><View style={[styles.corner, styles.cornerBottomRight]} /></View><Text style={styles.instruction}>Coloca el código de barras dentro del marco</Text></View><View style={styles.bottomControls}>{cameraError && <FadeInView><Text style={styles.cameraError}>La cámara no está disponible.</Text></FadeInView>}{feedback && <FadeInView style={[styles.feedback, feedback.tone === 'error' && styles.feedbackError]}><Text style={styles.feedbackTitle}>{feedback.title}</Text>{feedback.detail && <Text style={styles.feedbackDetail}>{feedback.detail}</Text>}{feedback.tone === 'error' && <PressableScale accessibilityLabel="Escanear nuevamente" accessibilityRole="button" onPress={retryScan} style={styles.retry}><Text style={styles.retryText}>Escanear nuevamente</Text></PressableScale>}</FadeInView>}<PressableScale accessibilityLabel={torchEnabled ? 'Apagar linterna' : 'Encender linterna'} accessibilityRole="button" onPress={() => setTorchEnabled((current) => !current)} style={styles.torch}><Text style={styles.torchText}>{torchEnabled ? 'Apagar linterna' : 'Linterna'}</Text></PressableScale></View></SafeAreaView></View>;
 }
 
 const styles = StyleSheet.create({
   cameraScreen: { flex: 1, backgroundColor: '#101A20' },
   overlay: { flex: 1, justifyContent: 'space-between' },
-  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: 'rgba(10, 30, 25, 0.62)' },
   iconButton: { width: 44, height: 44, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.9)' },
-  backGlyph: { color: colors.ink, fontSize: 32, lineHeight: 34 },
   cameraTitle: { color: colors.white, fontSize: typography.title, fontWeight: fontWeights.bold },
   location: { marginTop: spacing.xs, color: 'rgba(255,255,255,0.78)', fontSize: 11 },
   topSpacer: { width: 44 },
   scannerArea: { alignItems: 'center', justifyContent: 'center' },
-  frame: { width: 286, height: 180, borderRadius: radii.md },
+  frame: { width: '80%', maxWidth: 340, height: 190, borderRadius: radii.md, backgroundColor: 'rgba(255,255,255,0.04)' },
   corner: { position: 'absolute', width: 32, height: 32, borderColor: colors.white },
-  cornerTopLeft: { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3 },
-  cornerTopRight: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3 },
-  cornerBottomLeft: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3 },
-  cornerBottomRight: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3 },
+  cornerTopLeft: { borderTopLeftRadius: 18, top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3 },
+  cornerTopRight: { borderTopRightRadius: 18, top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3 },
+  cornerBottomLeft: { borderBottomLeftRadius: 18, bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3 },
+  cornerBottomRight: { borderBottomRightRadius: 18, bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3 },
   instruction: { marginTop: spacing.lg, paddingHorizontal: spacing.lg, color: colors.white, fontSize: 13, fontWeight: fontWeights.semibold, textAlign: 'center' },
   bottomControls: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
-  torch: { minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radii.pill, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center' },
+  torch: { minHeight: 52, paddingHorizontal: spacing.lg, borderRadius: radii.pill, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center' },
   torchText: { color: colors.ink, fontSize: 12, fontWeight: fontWeights.bold },
   feedback: { width: '100%', marginBottom: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.brandSoft },
   feedbackError: { backgroundColor: colors.redSoft },

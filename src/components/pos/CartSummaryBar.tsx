@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 
 import { FadeInView, PressableScale } from '../motion';
-import { colors, fontWeights, motion, radii, spacing, surfaces } from '../../theme';
+import { colors, fontWeights, motion, radii, spacing, shadows, surfaces } from '../../theme';
 import { formatMinorUnits } from '../../utils/formatCurrency';
 
 type Props = { itemCount: number; totalCents: number; onViewCart: () => void; onCheckout: () => void };
@@ -32,7 +32,7 @@ export function CartSummaryBar({ itemCount, totalCents, onViewCart, onCheckout }
 }
 
 const styles = StyleSheet.create({
-  wrapper: { ...surfaces.card, position: 'absolute', left: spacing.md, right: spacing.md, bottom: spacing.sm, minHeight: 70, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, zIndex: 10 },
+  wrapper: { ...surfaces.card, ...shadows.card, position: 'absolute', left: spacing.md, right: spacing.md, bottom: spacing.sm, minHeight: 84, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, zIndex: 10 },
   info: { flex: 1, minWidth: 74 },
   count: { color: colors.inkMuted, fontSize: 11, fontWeight: fontWeights.bold },
   total: { marginTop: spacing.xs, color: colors.ink, fontSize: 16, fontWeight: fontWeights.heavy },

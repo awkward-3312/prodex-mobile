@@ -24,6 +24,6 @@ export function StatusBadge({ label, tone, style }: Props) {
 }
 
 const styles = StyleSheet.create({
-  badge: { alignSelf: 'flex-start', maxWidth: '100%', paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.pill },
-  text: { fontSize: 10, fontWeight: fontWeights.semibold },
+  badge: { alignSelf: 'flex-start', maxWidth: '100%', paddingHorizontal: spacing.sm, paddingVertical: 5, borderRadius: radii.pill },
+  text: { fontSize: 11, fontWeight: fontWeights.semibold },
 });

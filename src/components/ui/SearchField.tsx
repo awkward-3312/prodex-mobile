@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
@@ -14,11 +15,14 @@ type Props = {
 
 /** One search treatment shared by POS, Inventory and Sales — same height/radius/iconography everywhere. Purely presentational: debounce and stale-request handling stay owned by each screen. */
 export function SearchField({ value, onChangeText, placeholder, accessibilityLabel, style }: Props) {
+  const [focused, setFocused] = useState(false);
   return (
-    <View style={[styles.box, style]}>
+    <View style={[styles.box, focused && styles.focused, style]}>
       <Ionicons name="search-outline" size={19} color={colors.inkMuted} />
       <TextInput
         accessibilityLabel={accessibilityLabel}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         placeholder={placeholder}
         placeholderTextColor={colors.inkMuted}
         value={value}
@@ -37,6 +41,7 @@ export function SearchField({ value, onChangeText, placeholder, accessibilityLab
 
 const styles = StyleSheet.create({
   box: { ...surfaces.input, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md },
+  focused: { borderColor: colors.brand, backgroundColor: colors.surface },
   input: { flex: 1, minHeight: sizing.touch, color: colors.ink, fontSize: typography.body },
-  clear: { width: 32, height: sizing.touch, alignItems: 'center', justifyContent: 'center' },
+  clear: { width: sizing.touch, height: sizing.touch, alignItems: 'center', justifyContent: 'center' },
 });

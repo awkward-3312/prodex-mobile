@@ -27,7 +27,7 @@ export function AppHeader({ title, subtitle, icon, onBack, action, trailing }: P
           <Ionicons name="arrow-back" size={21} color={colors.ink} />
         </PressableScale>
       ) : icon ? (
-        <View style={styles.iconBadge}><Ionicons name={icon} size={20} color={colors.ink} /></View>
+        <View style={styles.iconBadge}><Ionicons name={icon} size={20} color={colors.brand} /></View>
       ) : null}
       <View style={styles.copy}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>

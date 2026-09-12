@@ -12,13 +12,13 @@ export function CashPaymentForm({ totalCents, receivedInput, receivedCents, shor
 }
 
 const styles = StyleSheet.create({
-  container: { ...surfaces.card, marginTop: spacing.md, padding: spacing.md },
+  container: { ...surfaces.card, marginTop: spacing.md, padding: spacing.lg },
   label: { color: colors.ink, fontSize: typography.caption, fontWeight: fontWeights.bold },
-  input: { ...surfaces.input, marginTop: spacing.sm, paddingHorizontal: spacing.md, color: colors.ink, fontSize: 20, fontWeight: fontWeights.heavy },
+  input: { ...surfaces.input, marginTop: spacing.sm, paddingHorizontal: spacing.md, color: colors.ink, minHeight: 64, fontSize: 28, fontWeight: fontWeights.heavy },
   quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   quick: { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas, borderWidth: 1, borderColor: colors.line },
   quickText: { color: colors.brandDark, fontSize: 12, fontWeight: fontWeights.bold },
-  result: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: spacing.sm, rowGap: spacing.xs, marginTop: spacing.sm },
+  result: { padding: spacing.md, borderRadius: radii.sm, backgroundColor: colors.canvas, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: spacing.sm, rowGap: spacing.xs, marginTop: spacing.sm },
   resultLabel: { color: colors.inkMuted, fontSize: 12 },
   resultValue: { marginRight: spacing.md, color: colors.ink, fontSize: 13, fontWeight: fontWeights.bold },
 });

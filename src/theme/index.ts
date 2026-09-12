@@ -1,19 +1,19 @@
 export const colors = {
-  brand: '#0D8B68',
+  brand: '#087F62',
   brandDark: '#08634C',
   brandSoft: '#DDF5EC',
-  ink: '#17324D',
-  inkMuted: '#66788A',
-  canvas: '#F6F8F7',
+  ink: '#193C38',
+  inkMuted: '#637873',
+  canvas: '#F3F7F5',
   surface: '#FFFFFF',
-  line: '#E5EBE8',
+  line: '#DFE9E4',
   blue: '#2574D8',
   blueSoft: '#E7F0FF',
-  teal: '#0FA7A0',
+  teal: '#087E78',
   tealSoft: '#DFF7F4',
-  amber: '#D98E04',
+  amber: '#986407',
   amberSoft: '#FFF3D6',
-  red: '#C94C4C',
+  red: '#B43F48',
   redSoft: '#FCE7E7',
   purple: '#7758C7',
   purpleSoft: '#F0EBFF',
@@ -31,20 +31,20 @@ export const spacing = {
 
 export const radii = {
   xs: 8,
-  sm: 10,
-  md: 14,
-  lg: 18,
+  sm: 14,
+  md: 20,
+  lg: 28,
   pill: 999,
 } as const;
 
 export const typography = {
   display: 28,
-  title: 21,
+  title: 24,
   subtitle: 16,
   body: 14,
   caption: 12,
   metric: 24,
-  button: 13,
+  button: 14,
   label: 11,
 } as const;
 
@@ -69,8 +69,8 @@ export const shadows = {
 export const sizing = {
   headerAvatar: 46,
   touch: 44,
-  input: 48,
-  button: 48,
+  input: 52,
+  button: 52,
   iconButton: 44,
 } as const;
 

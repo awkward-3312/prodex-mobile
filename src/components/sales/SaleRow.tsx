@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, fontWeights, spacing, typography } from '../../theme';
+import { colors, fontWeights, radii, spacing, typography } from '../../theme';
 import type { MobileSale } from '../../types/mobileSales';
 import { formatCurrency, parseMinorUnits } from '../../utils/formatCurrency';
 import { StatusBadge } from '../ui/StatusBadge';
@@ -47,20 +47,22 @@ export const SaleRow = memo(function SaleRow({ sale }: Props) {
           <Text style={styles.total} numberOfLines={1}>{formatCurrency(parseMinorUnits(sale.grand_total) / 100)}</Text>
         </View>
         <View style={styles.bottomLine}>
-          <Text style={styles.meta} numberOfLines={1}>{customerName} · {formatSaleDateTime(sale.date)}</Text>
+          <Text style={styles.meta} numberOfLines={1}>{customerName}</Text>
           <StatusBadge label={STATUS_LABEL[sale.payment_status]} tone={sale.payment_status === 'paid' ? 'positive' : 'warning'} />
         </View>
+        <Text style={styles.date}>{formatSaleDateTime(sale.date)}</Text>
       </View>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  row: { minHeight: 64, justifyContent: 'center', paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  main: { flex: 1, gap: 4 },
+  row: { minHeight: 104, justifyContent: 'center', padding: spacing.lg, marginBottom: spacing.sm, borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  main: { flex: 1, gap: 7 },
   topLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   reference: { flex: 1, color: colors.ink, fontSize: typography.body, fontWeight: fontWeights.semibold },
   total: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.heavy },
   bottomLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  date: { color: colors.inkMuted, fontSize: 11 },
   meta: { flex: 1, color: colors.inkMuted, fontSize: 12 },
 });

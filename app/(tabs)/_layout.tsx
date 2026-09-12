@@ -40,7 +40,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.inkMuted,
         tabBarLabelStyle: { fontSize: 11, fontWeight: fontWeights.semibold },
-        tabBarStyle: { height: 58 + insets.bottom, paddingTop: spacing.xs, paddingBottom: insets.bottom + spacing.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0 },
+        tabBarStyle: { height: 66 + insets.bottom, paddingTop: spacing.xs, paddingBottom: insets.bottom + spacing.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0 },
         tabBarItemStyle: { minHeight: 44, borderRadius: radii.md },
         tabBarIcon: ({ color, focused }) => {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -65,7 +65,7 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  iconSlot: { width: 36, height: 28, alignItems: 'center', justifyContent: 'center', borderRadius: radii.pill },
+  iconSlot: { width: 46, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: radii.pill },
   activeIcon: { backgroundColor: colors.brandSoft },
-  posIcon: { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.brandSoft },
+  posIcon: { },
 });

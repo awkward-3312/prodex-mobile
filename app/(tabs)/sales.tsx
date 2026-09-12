@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg },
   searchBox: { marginTop: spacing.md },
   filtersRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
-  titleRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md, marginBottom: spacing.xs },
+  titleRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.lg, marginBottom: spacing.md },
   sectionTitle: { color: colors.ink, fontSize: 16, fontWeight: fontWeights.bold },
   footerSpinner: { paddingVertical: spacing.lg },
   emptyState: { alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },

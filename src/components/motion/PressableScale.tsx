@@ -16,9 +16,11 @@ type Props = Omit<PressableProps, 'children' | 'style'> & {
 export function PressableScale({ children, disabled, onPressIn, onPressOut, scaleTo = motion.pressScale, style, ...props }: Props) {
   const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
+    opacity: disabled ? 0.55 : opacity.value,
   }));
 
   const animateTo = (nextValue: number) => {
@@ -28,12 +30,16 @@ export function PressableScale({ children, disabled, onPressIn, onPressOut, scal
   };
 
   const handlePressIn = (event: GestureResponderEvent) => {
-    if (!disabled) animateTo(scaleTo);
+    if (!disabled) {
+      animateTo(scaleTo);
+      opacity.value = withTiming(0.86, { duration: motion.duration.fast });
+    }
     onPressIn?.(event);
   };
 
   const handlePressOut = (event: GestureResponderEvent) => {
     animateTo(1);
+    opacity.value = withTiming(1, { duration: motion.duration.fast });
     onPressOut?.(event);
   };
 

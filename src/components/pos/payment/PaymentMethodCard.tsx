@@ -34,7 +34,7 @@ export function PaymentMethodCard({ method, selected, onPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: { width: '48%', minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderWidth: 1, borderRadius: radii.sm },
+  card: { width: '48%', minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.md, borderWidth: 1, borderRadius: radii.sm },
   icon: { width: 32, height: 32, borderRadius: radii.xs, alignItems: 'center', justifyContent: 'center' },
   label: { flex: 1, color: colors.ink, fontSize: typography.caption, fontWeight: fontWeights.semibold },
 });

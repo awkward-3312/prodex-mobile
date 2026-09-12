@@ -14,8 +14,8 @@ export function CategoryChip({ label, selected, onPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  chip: { minHeight: 36, paddingHorizontal: spacing.md, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
-  selected: { backgroundColor: colors.brand, borderColor: colors.brand },
+  chip: { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  selected: { backgroundColor: colors.brandDark, borderColor: colors.brandDark },
   label: { color: colors.inkMuted, fontSize: typography.caption, fontWeight: fontWeights.semibold },
   selectedLabel: { color: colors.white },
 });

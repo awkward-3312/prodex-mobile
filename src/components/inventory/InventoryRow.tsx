@@ -30,7 +30,7 @@ export const InventoryRow = memo(function InventoryRow({ item }: Props) {
         )}
       </View>
       <View style={styles.copy}>
-        <Text style={styles.name} numberOfLines={1}>{item.display_name}</Text>
+        <Text style={styles.name} numberOfLines={2}>{item.display_name}</Text>
         <Text style={styles.meta} numberOfLines={1}>{secondary}</Text>
       </View>
       <View style={styles.stockColumn}>
@@ -44,8 +44,8 @@ export const InventoryRow = memo(function InventoryRow({ item }: Props) {
 });
 
 const styles = StyleSheet.create({
-  row: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  image: { width: 40, height: 40, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas, overflow: 'hidden' },
+  row: { minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, marginBottom: spacing.sm, borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  image: { width: 46, height: 46, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas, overflow: 'hidden' },
   productImage: { width: '100%', height: '100%' },
   copy: { flex: 1, minWidth: 0 },
   name: { color: colors.ink, fontSize: typography.body, fontWeight: fontWeights.semibold },

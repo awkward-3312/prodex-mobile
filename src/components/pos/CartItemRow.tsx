@@ -20,15 +20,15 @@ export function CartItemRow({ item, onIncrease, onDecrease, onRemove }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  copy: { flex: 1 },
+  row: { minHeight: 76, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
+  copy: { flexGrow: 1, flexBasis: '100%' },
   name: { color: colors.ink, fontSize: 13, fontWeight: fontWeights.bold, lineHeight: 17 },
   variant: { marginTop: 2, color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.medium },
   unit: { marginTop: spacing.xs, color: colors.inkMuted, fontSize: 12 },
   controls: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  control: { width: 32, height: 32, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas },
+  control: { width: 44, height: 44, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas },
   quantity: { minWidth: 18, color: colors.ink, fontSize: 13, fontWeight: fontWeights.semibold, textAlign: 'center' },
   total: { minWidth: 62, alignItems: 'flex-end', gap: spacing.xs },
   subtotal: { color: colors.ink, fontSize: 12, fontWeight: fontWeights.bold },
-  remove: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  remove: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 });
