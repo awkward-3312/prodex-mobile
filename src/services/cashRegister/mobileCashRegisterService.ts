@@ -79,7 +79,7 @@ export type CashRegisterHistoryItem = {
 export type CashRegisterHistoryPagination = { page: number; per_page: number; total: number; last_page: number; has_more: boolean };
 export type CashRegisterHistoryResponse = { items: CashRegisterHistoryItem[]; pagination: CashRegisterHistoryPagination };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object';
 }
 
@@ -87,7 +87,7 @@ function asString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-function parseEntity(value: unknown): CashRegisterEntity {
+export function parseEntity(value: unknown): CashRegisterEntity {
   if (!isRecord(value)) return null;
   const id = typeof value.id === 'string' || typeof value.id === 'number' ? value.id : null;
   if (id === null) return null;
@@ -100,7 +100,20 @@ function parsePaymentMethodTotal(value: unknown): CashRegisterPaymentMethodTotal
   return { id, name: value.name, category: value.category, total: value.total };
 }
 
-function parseSummary(value: unknown): CashRegisterSummary | null {
+export function parseCashRegisterEntity(value: unknown): CashRegisterCurrent | null {
+  if (!isRecord(value) || (typeof value.id !== 'string' && typeof value.id !== 'number') || typeof value.opened_at !== 'string' || typeof value.opening_balance !== 'string') return null;
+  return {
+    id: value.id,
+    openedAt: value.opened_at,
+    openingBalance: value.opening_balance,
+    branch: parseEntity(value.branch),
+    inventoryLocation: parseEntity(value.inventory_location),
+    warehouse: parseEntity(value.warehouse),
+    cashDrawer: parseEntity(value.cash_drawer),
+  };
+}
+
+export function parseSummary(value: unknown): CashRegisterSummary | null {
   if (
     !isRecord(value)
     || typeof value.transaction_count !== 'number'

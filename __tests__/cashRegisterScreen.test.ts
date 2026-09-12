@@ -77,9 +77,34 @@ it('shows loading then the open register summary with payment methods', async ()
   expect(texts).toContain('Efectivo esperado');
   expect(texts).toContain('Efectivo');
   expect(texts).toContain('Tarjeta');
+  expect(texts).toContain('Entrada');
+  expect(texts).toContain('Salida');
 });
 
-it('shows the empty state with no open register, without an "Abrir caja" button', async () => {
+it('hides Entrada/Salida for a report-only user on an open register', async () => {
+  mockPermissions = ['cash_register_report'];
+  mockGetCurrent.mockResolvedValue(openRegister());
+  let root!: ReturnType<typeof create>;
+  await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });
+
+  const texts = findAllText(root).join(' ');
+  expect(texts).toContain('Caja abierta');
+  expect(findAllText(root)).not.toContain('Entrada');
+  expect(findAllText(root)).not.toContain('Salida');
+});
+
+it('shows an "Abrir caja" button when the user can operate the register', async () => {
+  mockGetCurrent.mockResolvedValue({ status: 'closed', register: null, summary: null });
+  let root!: ReturnType<typeof create>;
+  await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });
+
+  const texts = findAllText(root).join(' ');
+  expect(texts).toContain('No tienes una caja abierta.');
+  expect(findAllText(root)).toContain('Abrir caja');
+});
+
+it('hides the "Abrir caja" button for a report-only user', async () => {
+  mockPermissions = ['cash_register_report'];
   mockGetCurrent.mockResolvedValue({ status: 'closed', register: null, summary: null });
   let root!: ReturnType<typeof create>;
   await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });

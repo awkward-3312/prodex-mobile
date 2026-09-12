@@ -1,11 +1,13 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CashMovementModal } from '../../src/components/cashRegister/CashMovementModal';
 import { CashRegisterHistoryRow } from '../../src/components/cashRegister/CashRegisterHistoryRow';
 import { CategoryChip } from '../../src/components/pos/CategoryChip';
-import { FadeInView } from '../../src/components/motion';
+import { FadeInView, PressableScale } from '../../src/components/motion';
 import { AppHeader } from '../../src/components/ui/AppHeader';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { useAuth } from '../../src/context/AuthContext';
@@ -17,7 +19,7 @@ import {
 } from '../../src/services/cashRegister/mobileCashRegisterService';
 import type { CashRegisterCurrentResponse, CashRegisterHistoryItem, CashRegisterPaymentMethodTotal } from '../../src/services/cashRegister/mobileCashRegisterService';
 import { formatCurrency } from '../../src/utils/formatCurrency';
-import { colors, fontWeights, spacing, surfaces, typography } from '../../src/theme';
+import { colors, fontWeights, radii, sizing, spacing, surfaces, typography } from '../../src/theme';
 
 const HISTORY_PER_PAGE = 20;
 
@@ -33,12 +35,13 @@ function PaymentMethodRow({ method }: { method: CashRegisterPaymentMethodTotal }
   return <View style={styles.methodRow}><Text style={styles.methodName} numberOfLines={1}>{method.name}</Text><Text style={styles.methodTotal}>{money(method.total)}</Text></View>;
 }
 
-function CurrentRegisterView() {
+function CurrentRegisterView({ canOperate }: { canOperate: boolean }) {
   const { session, signOut } = useAuth();
   const [data, setData] = useState<CashRegisterCurrentResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [movementType, setMovementType] = useState<'in' | 'out' | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const load = useCallback((mode: 'initial' | 'refresh' = 'initial') => {
@@ -90,6 +93,19 @@ function CurrentRegisterView() {
           <Text style={styles.locationLabel}>{[data.register.branch?.name, data.register.cashDrawer?.name ?? data.register.inventoryLocation?.name].filter(Boolean).join(' · ') || 'Sin ubicación asignada'}</Text>
           <Text style={styles.openedAt}>Abierta desde {data.register.openedAt}</Text>
 
+          {canOperate ? (
+            <View style={styles.movementRow}>
+              <PressableScale accessibilityRole="button" accessibilityLabel="Entrada de efectivo" style={[styles.movementButton, styles.movementIn]} onPress={() => setMovementType('in')}>
+                <Ionicons name="arrow-down-circle-outline" size={18} color={colors.brand} />
+                <Text style={[styles.movementButtonText, { color: colors.brandDark }]}>Entrada</Text>
+              </PressableScale>
+              <PressableScale accessibilityRole="button" accessibilityLabel="Salida de efectivo" style={[styles.movementButton, styles.movementOut]} onPress={() => setMovementType('out')}>
+                <Ionicons name="arrow-up-circle-outline" size={18} color={colors.amber} />
+                <Text style={[styles.movementButtonText, { color: colors.amber }]}>Salida</Text>
+              </PressableScale>
+            </View>
+          ) : null}
+
           <View style={styles.heroCard}>
             <Text style={styles.heroValue}>{money(data.summary.expectedCash)}</Text>
             <Text style={styles.heroLabel}>Efectivo esperado</Text>
@@ -116,8 +132,24 @@ function CurrentRegisterView() {
           ) : null}
         </FadeInView>
       ) : (
-        <EmptyState icon="lock-closed-outline" title="No tienes una caja abierta." message="Cuando abras una caja desde PRODEX, podrás consultar aquí el resumen de la sesión." />
+        <EmptyState
+          icon="lock-closed-outline"
+          title="No tienes una caja abierta."
+          message={canOperate ? 'Abre tu caja para comenzar a registrar ventas y movimientos de efectivo.' : 'Cuando abras una caja desde PRODEX, podrás consultar aquí el resumen de la sesión.'}
+          actionLabel={canOperate ? 'Abrir caja' : undefined}
+          onAction={canOperate ? () => router.push('/cash-register/open') : undefined}
+        />
       )}
+
+      {data?.status === 'open' ? (
+        <CashMovementModal
+          visible={movementType !== null}
+          type={movementType ?? 'in'}
+          registerId={data.register.id}
+          onClose={() => setMovementType(null)}
+          onSuccess={() => { setMovementType(null); load('refresh'); }}
+        />
+      ) : null}
     </ScrollView>
   );
 }
@@ -207,6 +239,7 @@ function HistoryView() {
 export default function CashRegisterScreen() {
   const { hasPermission } = useAuth();
   const canViewHistory = hasPermission('cash_register_report');
+  const canOperate = hasPermission('Pos_view');
   const [tab, setTab] = useState<'current' | 'history'>('current');
 
   return (
@@ -220,7 +253,7 @@ export default function CashRegisterScreen() {
           <CategoryChip label="Historial" selected={tab === 'history'} onPress={() => setTab('history')} />
         </View>
       ) : null}
-      {tab === 'current' || !canViewHistory ? <CurrentRegisterView /> : <HistoryView />}
+      {tab === 'current' || !canViewHistory ? <CurrentRegisterView canOperate={canOperate} /> : <HistoryView />}
     </SafeAreaView>
   );
 }
@@ -236,6 +269,11 @@ const styles = StyleSheet.create({
   statusText: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
   locationLabel: { marginTop: spacing.xs, color: colors.inkMuted, fontSize: 13, fontWeight: fontWeights.semibold },
   openedAt: { marginTop: 2, color: colors.inkMuted, fontSize: 12 },
+  movementRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
+  movementButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: sizing.touch, borderRadius: radii.md, borderWidth: StyleSheet.hairlineWidth },
+  movementIn: { backgroundColor: `${colors.brand}0D`, borderColor: `${colors.brand}33` },
+  movementOut: { backgroundColor: `${colors.amber}0D`, borderColor: `${colors.amber}33` },
+  movementButtonText: { fontSize: 13, fontWeight: fontWeights.bold },
   heroCard: { ...surfaces.card, marginTop: spacing.lg, padding: spacing.xl, alignItems: 'center', backgroundColor: colors.brandSoft },
   heroValue: { color: colors.brandDark, fontSize: 32, fontWeight: fontWeights.heavy },
   heroLabel: { marginTop: 2, color: colors.brandDark, fontSize: 12, fontWeight: fontWeights.bold },
