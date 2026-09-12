@@ -1,4 +1,4 @@
-import { cartItemsToPreflightLines, fiscalSummaryFromPreflight, getCheckoutContext, MobilePosCheckoutError, parseSalePreflightResponse, paymentIntentLine, preflightSale, quantityToPreflightString, searchClients } from '../src/services/pos/mobilePosCheckoutService';
+import { cartItemsToPreflightLines, fiscalSummaryFromPreflight, getCheckoutContext, MobilePosCheckoutError, needsAuthoritativeAmountRetry, parseSalePreflightResponse, paymentIntentLine, preflightSale, quantityToPreflightString, searchClients } from '../src/services/pos/mobilePosCheckoutService';
 import type { CartItem, PosProduct } from '../src/types/pos';
 
 function mockResponse(body: unknown, status = 200) {
@@ -174,5 +174,31 @@ describe('mobile POS checkout service', () => {
     jest.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse({ data: { payment_methods: [{}] } }));
     await expect(getCheckoutContext(auth)).rejects.toBeInstanceOf(MobilePosCheckoutError);
     await expect(getCheckoutContext(auth)).rejects.toMatchObject({ status: 'invalid_response' });
+  });
+
+  describe('needsAuthoritativeAmountRetry (auto tax preflight self-correction)', () => {
+    const mismatch = parseSalePreflightResponse(preflight({ can_submit: false, errors: [{ code: 'payment_total_invalid', message: 'mismatch' }] }));
+    const insufficientStock = parseSalePreflightResponse(preflight({ can_submit: false, errors: [{ code: 'insufficient_stock', message: 'no stock' }] }));
+    const validated = parseSalePreflightResponse(preflight());
+
+    it('retries once when the estimated (pre-tax) amount the user never typed does not match the authoritative total', () => {
+      expect(needsAuthoritativeAmountRetry(mismatch, { usingAutoAmount: true, alreadyRetried: false })).toBe(true);
+    });
+
+    it('never retries a second time for the same attempt (would loop)', () => {
+      expect(needsAuthoritativeAmountRetry(mismatch, { usingAutoAmount: true, alreadyRetried: true })).toBe(false);
+    });
+
+    it('never silently overwrites an amount the user explicitly typed', () => {
+      expect(needsAuthoritativeAmountRetry(mismatch, { usingAutoAmount: false, alreadyRetried: false })).toBe(false);
+    });
+
+    it('does not mask a real business rejection as an amount mismatch', () => {
+      expect(needsAuthoritativeAmountRetry(insufficientStock, { usingAutoAmount: true, alreadyRetried: false })).toBe(false);
+    });
+
+    it('does not retry once the sale already validates', () => {
+      expect(needsAuthoritativeAmountRetry(validated, { usingAutoAmount: true, alreadyRetried: false })).toBe(false);
+    });
   });
 });

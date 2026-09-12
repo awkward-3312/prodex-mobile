@@ -334,6 +334,17 @@ export function paymentIntentLine(paymentMethodId: string | number, amountCents:
   };
 }
 
+/**
+ * A single-method cash amount left to auto-fill uses the provisional (pre-tax) subtotal
+ * for the very first preflight, since the authoritative total is not known yet. If PRODEX
+ * rejects that estimate as a mismatch, this says whether to silently resend once with the
+ * authoritative grand_total instead of surfacing a bogus "amount doesn't match" error -
+ * never when the user typed their own amount, and never more than once per attempt.
+ */
+export function needsAuthoritativeAmountRetry(response: SalePreflightResponse, options: { usingAutoAmount: boolean; alreadyRetried: boolean }): boolean {
+  return !response.can_submit && !options.alreadyRetried && options.usingAutoAmount && response.errors.some((error) => error.code === 'payment_total_invalid');
+}
+
 export function checkoutContextLocationLabel(context: CheckoutContext | null) {
   if (!context) return 'Cargando contexto...';
   return [context.operational_context.branch?.name, context.operational_context.inventory_location?.name, context.operational_context.cash_drawer?.name].filter(Boolean).join(' · ') || 'Contexto operativo no disponible';

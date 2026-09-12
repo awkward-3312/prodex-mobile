@@ -13,7 +13,7 @@ import { PaymentSummary } from '../../src/components/pos/payment/PaymentSummary'
 import { FadeInView, PressableScale } from '../../src/components/motion';
 import { useAuth } from '../../src/context/AuthContext';
 import { usePosCart } from '../../src/context/PosCartContext';
-import { cartItemsToPreflightLines, checkoutContextLocationLabel, fiscalSummaryFromPreflight, getCheckoutContext, MobilePosCheckoutError, paymentIntentLine, preflightSale, searchClients } from '../../src/services/pos/mobilePosCheckoutService';
+import { cartItemsToPreflightLines, checkoutContextLocationLabel, fiscalSummaryFromPreflight, getCheckoutContext, MobilePosCheckoutError, needsAuthoritativeAmountRetry, paymentIntentLine, preflightSale, searchClients } from '../../src/services/pos/mobilePosCheckoutService';
 import { colors, fontWeights, motion, radii, sizing, spacing, surfaces, typography } from '../../src/theme';
 import type { CheckoutAccount, CheckoutContext, CheckoutCurrency, CheckoutCustomer, CheckoutPaymentMethod, ClientSearchResult } from '../../src/types/mobilePosCheckout';
 import type { FiscalSummary, PreflightError, PreflightPaymentIntentLine, SalePreflightResponse } from '../../src/types/mobilePosSalePreflight';
@@ -94,6 +94,7 @@ export default function CheckoutScreen() {
   const availableMethods = useMemo(() => context?.payment_methods.filter((method) => method.is_supported && method.is_available) ?? [], [context]);
   const selectedMethod = useMemo(() => availableMethods.find((method) => method.id === selection) ?? null, [availableMethods, selection]);
   const currency = context?.currency;
+  const usingAutoPaymentAmount = selection !== 'mixed' && selectedMethod ? !(paymentInputs[String(selectedMethod.id)] ?? '').trim() : false;
   const currentPreflightKey = useMemo(() => JSON.stringify({
     owner: `${session?.baseUrl ?? ''}|${session?.accessToken ?? ''}`,
     context: context?.operational_context,
@@ -105,7 +106,6 @@ export default function CheckoutScreen() {
   }), [accountSelections, cart.items, context?.operational_context, paymentInputs, selectedCustomer?.id, selection, session?.baseUrl, session?.accessToken]);
   const activePreflight = preflightKey === currentPreflightKey ? preflight : null;
   const activePreflightError = preflightErrorKey === currentPreflightKey ? preflightError : null;
-  const preflightStatus = activePreflight?.can_submit ? 'validated' : preflightLoading ? 'loading' : 'pending';
   const fiscalSummary = useMemo<FiscalSummary | null>(() => (activePreflight ? fiscalSummaryFromPreflight(activePreflight) : null), [activePreflight]);
   const displayTotalCents = fiscalSummary?.totalCents ?? cart.totalCents;
   const cashInput = selectedMethod ? paymentInputs[String(selectedMethod.id)] ?? '' : '';
@@ -192,7 +192,7 @@ export default function CheckoutScreen() {
   const updatePaymentInput = (id: string | number, value: string) => setPaymentInputs((current) => ({ ...current, [String(id)]: value }));
   const updateAccount = (id: string | number, value: string | number | null) => setAccountSelections((current) => ({ ...current, [String(id)]: value }));
 
-  const buildPaymentIntent = (): PreflightPaymentIntentLine[] => {
+  const buildPaymentIntent = (totalOverrideCents?: number): PreflightPaymentIntentLine[] => {
     if (!context || selection === null) return [];
     if (selection === 'mixed') {
       return availableMethods.flatMap((method) => {
@@ -204,7 +204,7 @@ export default function CheckoutScreen() {
     const method = availableMethods.find((candidate) => candidate.id === selection);
     if (!method) return [];
     const typedAmount = parseMinorUnits(paymentInputs[String(method.id)] ?? '');
-    const amount = typedAmount > 0 ? typedAmount : displayTotalCents;
+    const amount = typedAmount > 0 ? typedAmount : (totalOverrideCents ?? displayTotalCents);
     return [paymentIntentLine(method.id, amount, accountSelections[String(method.id)])];
   };
 
@@ -220,9 +220,12 @@ export default function CheckoutScreen() {
     if (missingAccount) return `Selecciona una cuenta para ${displayPaymentMethodName(missingAccount)}.`;
     return null;
   }, [accountSelections, availableMethods, cart.items.length, context, paymentInputs, selectedCustomer, selectedMethod, selection]);
+  const preflightPending = !validationMessage && preflightKey !== currentPreflightKey && preflightErrorKey !== currentPreflightKey;
+  const preflightStatus = activePreflight?.can_submit ? 'validated' : preflightLoading || preflightPending ? 'loading' : activePreflightError ? 'error' : 'pending';
 
-  const submitPreflight = async () => {
+  const submitPreflight = async (totalOverrideCents?: number, isAutoCorrection = false) => {
     if (!session?.baseUrl || !session.accessToken || !selectedCustomer || validationMessage || cart.saleSubmission.isLocked()) return;
+    const requestedKey = currentPreflightKey;
     const seq = preflightSeq.current + 1;
     preflightSeq.current = seq;
     preflightAbortRef.current?.abort();
@@ -231,7 +234,7 @@ export default function CheckoutScreen() {
     setPreflightLoading(true);
     setPreflightError(null);
     try {
-      const request: SalePreflightRequest = { client_id: selectedCustomer.id, lines: cartItemsToPreflightLines(cart.items), payment_intent: buildPaymentIntent() };
+      const request: SalePreflightRequest = { client_id: selectedCustomer.id, lines: cartItemsToPreflightLines(cart.items), payment_intent: buildPaymentIntent(totalOverrideCents) };
       const response = await preflightSale({
         baseUrl: session.baseUrl,
         accessToken: session.accessToken,
@@ -239,12 +242,19 @@ export default function CheckoutScreen() {
         request,
       });
       if (preflightSeq.current !== seq) return;
+      // A first estimate uses the provisional subtotal as the cash amount; once PRODEX
+      // returns the authoritative total (with tax), silently resend with that exact
+      // amount instead of surfacing a bogus "amount mismatch" error to the user.
+      if (needsAuthoritativeAmountRetry(response, { usingAutoAmount: usingAutoPaymentAmount, alreadyRetried: isAutoCorrection })) {
+        await submitPreflight(parseMinorUnits(response.totals.grand_total), true);
+        return;
+      }
       setPreflight(response);
       setPreflightIntent(request);
-      setPreflightKey(currentPreflightKey);
+      setPreflightKey(requestedKey);
       if (!response.can_submit) {
         setPreflightError(response.errors.map(friendlyPreflightError).join('\n') || 'PRODEX no pudo validar la venta.');
-        setPreflightErrorKey(currentPreflightKey);
+        setPreflightErrorKey(requestedKey);
       }
     } catch (error) {
       if (preflightSeq.current !== seq) return;
@@ -253,11 +263,20 @@ export default function CheckoutScreen() {
         return;
       }
       setPreflightError(error instanceof MobilePosCheckoutError ? checkoutErrorMessage(error) : 'No pudimos revisar la venta.');
-      setPreflightErrorKey(currentPreflightKey);
+      setPreflightErrorKey(requestedKey);
     } finally {
       if (preflightSeq.current === seq) setPreflightLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!context || contextLoading || validationMessage) return;
+    if (preflightKey === currentPreflightKey || preflightErrorKey === currentPreflightKey) return;
+    if (preflightLoading || cart.saleSubmission.isLocked()) return;
+    const timeout = setTimeout(() => { void submitPreflight(); }, 400);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context, contextLoading, validationMessage, currentPreflightKey, preflightKey, preflightErrorKey, preflightLoading]);
 
   const renderAccountSelector = (method: CheckoutPaymentMethod) => {
     if (!method.requires_account) return null;
@@ -314,6 +333,12 @@ export default function CheckoutScreen() {
     return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><FadeInView style={styles.empty}><Ionicons name="cart-outline" size={42} color={colors.inkMuted} /><Text style={styles.emptyTitle}>No hay una venta activa</Text><Text style={styles.emptyText}>Agrega productos desde el POS para comenzar.</Text><PressableScale accessibilityLabel="Volver al POS" accessibilityRole="button" onPress={() => router.replace('/(tabs)/pos')} style={styles.primary}><Text style={styles.primaryText}>Volver al POS</Text></PressableScale></FadeInView></SafeAreaView>;
   }
 
+  const canConfirm = activePreflight?.can_submit === true;
+  const ctaBusy = preflightStatus === 'loading';
+  const ctaLabel = canConfirm ? 'Confirmar venta' : ctaBusy ? 'Calculando...' : activePreflightError ? 'Reintentar validación' : 'Revisar venta';
+  const ctaDisabled = !!validationMessage || ctaBusy || (!canConfirm && !activePreflightError);
+  const ctaAction = () => { if (canConfirm) void confirmSale(); else if (activePreflightError) void submitPreflight(); };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -326,7 +351,7 @@ export default function CheckoutScreen() {
           {contextLoading && <FadeInView style={styles.stateBox}><ActivityIndicator color={colors.brand} /><Text style={styles.stateText}>Cargando contexto de checkout...</Text></FadeInView>}
           {contextError && <FadeInView style={styles.stateBox}><Text style={styles.error}>{contextError}</Text><PressableScale accessibilityLabel="Reintentar checkout" accessibilityRole="button" onPress={loadContext} style={styles.retry}><Text style={styles.retryText}>Reintentar</Text></PressableScale></FadeInView>}
 
-          <FadeInView delay={30} distance={6}><PaymentSummary itemCount={cart.itemCount} subtotalCents={fiscalSummary?.subtotalCents ?? cart.subtotalCents} discountCents={fiscalSummary?.discountCents ?? cart.discountCents} taxCents={fiscalSummary?.taxCents ?? 0} totalCents={fiscalSummary?.totalCents ?? cart.totalCents} authoritative={!!fiscalSummary} currency={currency} /></FadeInView>
+          <FadeInView delay={30} distance={6}><PaymentSummary itemCount={cart.itemCount} subtotalCents={fiscalSummary?.subtotalCents ?? cart.subtotalCents} discountCents={fiscalSummary?.discountCents ?? cart.discountCents} taxCents={fiscalSummary?.taxCents ?? 0} totalCents={fiscalSummary?.totalCents ?? cart.totalCents} authoritative={!!fiscalSummary} loading={!fiscalSummary && (preflightLoading || preflightPending)} currency={currency} /></FadeInView>
 
           <Text style={styles.sectionTitle}>Cliente</Text>
           <FadeInView delay={55} distance={6} style={styles.customer}><View style={styles.customerCopy}><Text style={styles.customerLabel}>Cliente actual</Text><Text style={styles.customerName}>{selectedCustomer?.name ?? 'Selecciona un cliente'}</Text>{selectedCustomer?.rtn ? <Text style={styles.customerMeta}>RTN {selectedCustomer.rtn}</Text> : null}</View><PressableScale accessibilityLabel="Cambiar cliente" accessibilityRole="button" onPress={() => setClientModalVisible(true)} style={styles.changeButton}><Text style={styles.change}>Cambiar</Text></PressableScale></FadeInView>
@@ -339,11 +364,11 @@ export default function CheckoutScreen() {
           {validationMessage && <FadeInView><Text style={styles.error}>{validationMessage}</Text></FadeInView>}
           {activePreflightError && <FadeInView style={styles.preflightErrors}>{activePreflightError.split('\n').map((line) => <Text key={line} style={styles.error}>{line}</Text>)}</FadeInView>}
           <FadeInView style={[styles.preflightStatus, preflightStatus === 'validated' && styles.validated]} distance={4} duration={motion.duration.fast}>
-            {preflightStatus === 'loading' ? <ActivityIndicator size="small" color={colors.brand} /> : <Ionicons name={preflightStatus === 'validated' ? 'checkmark-circle' : 'shield-checkmark-outline'} size={20} color={preflightStatus === 'validated' ? colors.brand : colors.inkMuted} />}
-            <Text style={[styles.preflightStatusText, preflightStatus === 'validated' && styles.validatedText]}>{preflightStatus === 'validated' ? 'Venta validada por PRODEX. Aún no se ha confirmado el cobro.' : preflightStatus === 'loading' ? 'Validando venta con PRODEX...' : 'Pendiente de validación fiscal.'}</Text>
+            {preflightStatus === 'loading' ? <ActivityIndicator size="small" color={colors.brand} /> : <Ionicons name={preflightStatus === 'validated' ? 'checkmark-circle' : preflightStatus === 'error' ? 'alert-circle-outline' : 'shield-checkmark-outline'} size={20} color={preflightStatus === 'validated' ? colors.brand : colors.inkMuted} />}
+            <Text style={[styles.preflightStatusText, preflightStatus === 'validated' && styles.validatedText]}>{preflightStatus === 'validated' ? 'Venta validada por PRODEX. Aún no se ha confirmado el cobro.' : preflightStatus === 'loading' ? 'Calculando impuesto con PRODEX...' : preflightStatus === 'error' ? 'No pudimos validar la venta.' : 'Pendiente de validación fiscal.'}</Text>
           </FadeInView>
 
-          <PressableScale accessibilityLabel={activePreflight?.can_submit ? 'Confirmar venta' : 'Revisar venta'} accessibilityRole="button" accessibilityState={{ disabled: !!validationMessage || preflightLoading }} disabled={!!validationMessage || preflightLoading} onPress={activePreflight?.can_submit ? confirmSale : submitPreflight} scaleTo={motion.pressScalePrimary} style={[styles.confirm, !!validationMessage && styles.disabled]}><View style={styles.confirmContent}>{preflightLoading ? <ActivityIndicator size="small" color={colors.white} /> : null}<Text style={styles.confirmText}>{preflightLoading ? 'Revisando...' : activePreflight?.can_submit ? 'Confirmar venta' : 'Revisar venta'}</Text></View></PressableScale>
+          <PressableScale accessibilityLabel={ctaLabel} accessibilityRole="button" accessibilityState={{ disabled: ctaDisabled }} disabled={ctaDisabled} onPress={ctaAction} scaleTo={motion.pressScalePrimary} style={[styles.confirm, ctaDisabled && styles.disabled]}><View style={styles.confirmContent}>{preflightStatus === 'loading' ? <ActivityIndicator size="small" color={colors.white} /> : null}<Text style={styles.confirmText}>{ctaLabel}</Text></View></PressableScale>
         </ScrollView>
       </KeyboardAvoidingView>
       <Modal visible={clientModalVisible} transparent animationType="fade" onRequestClose={() => setClientModalVisible(false)}>

@@ -11,6 +11,7 @@ type Props = {
   taxCents: number;
   totalCents: number;
   authoritative?: boolean;
+  loading?: boolean;
   currency?: CheckoutCurrency;
 };
 
@@ -18,8 +19,10 @@ function money(value: number, currency?: CheckoutCurrency) {
   return formatCheckoutMinorUnits(value, currency);
 }
 
-export function PaymentSummary({ itemCount, subtotalCents, discountCents, taxCents, totalCents, authoritative = false, currency }: Props) {
-  return <View style={[styles.card, authoritative && styles.validated]}><View style={styles.header}><View><Text style={styles.title}>Resumen</Text><Text style={styles.mode}>{authoritative ? 'Validado por PRODEX' : 'Pendiente de validación fiscal'}</Text></View><Text style={styles.count}>{itemCount} {itemCount === 1 ? 'artículo' : 'artículos'}</Text></View><View style={styles.line}><Text style={styles.label}>{authoritative ? 'Subtotal' : 'Subtotal estimado'}</Text><Text style={styles.value}>{money(subtotalCents, currency)}</Text></View>{discountCents > 0 && <View style={styles.line}><Text style={styles.label}>Descuento</Text><Text style={styles.value}>{money(discountCents, currency)}</Text></View>}<View style={styles.line}><Text style={styles.label}>{authoritative ? 'ISV' : 'Impuesto'}</Text><Text style={styles.value}>{authoritative ? money(taxCents, currency) : 'Pendiente'}</Text></View><View style={styles.totalLine}><Text style={styles.totalLabel}>{authoritative ? 'Total' : 'Estimado'}</Text><Text style={styles.total}>{money(totalCents, currency)}</Text></View></View>;
+export function PaymentSummary({ itemCount, subtotalCents, discountCents, taxCents, totalCents, authoritative = false, loading = false, currency }: Props) {
+  const modeText = authoritative ? 'Validado por PRODEX' : loading ? 'Calculando impuesto con PRODEX...' : 'Pendiente de validación fiscal';
+  const taxText = authoritative ? money(taxCents, currency) : loading ? 'Calculando...' : 'Pendiente';
+  return <View style={[styles.card, authoritative && styles.validated]}><View style={styles.header}><View><Text style={styles.title}>Resumen</Text><Text style={styles.mode}>{modeText}</Text></View><Text style={styles.count}>{itemCount} {itemCount === 1 ? 'artículo' : 'artículos'}</Text></View><View style={styles.line}><Text style={styles.label}>{authoritative ? 'Subtotal' : 'Subtotal estimado'}</Text><Text style={styles.value}>{money(subtotalCents, currency)}</Text></View>{discountCents > 0 && <View style={styles.line}><Text style={styles.label}>Descuento</Text><Text style={styles.value}>{money(discountCents, currency)}</Text></View>}<View style={styles.line}><Text style={styles.label}>{authoritative ? 'ISV' : 'Impuesto'}</Text><Text style={styles.value}>{taxText}</Text></View><View style={styles.totalLine}><Text style={styles.totalLabel}>{authoritative ? 'Total' : 'Estimado'}</Text><Text style={styles.total}>{money(totalCents, currency)}</Text></View></View>;
 }
 
 const styles = StyleSheet.create({
