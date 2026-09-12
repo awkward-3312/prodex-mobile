@@ -1,15 +1,28 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, fontWeights, spacing } from '../../theme';
+import { colors, fontWeights, radii, spacing } from '../../theme';
 
-export function BrandSignature() {
-  return <View accessibilityLabel="PRODEX Mobile" style={styles.brand}>
-    <Text style={styles.wordmark}>PRODEX</Text>
-    <Text style={styles.label}>MOBILE</Text>
-  </View>;
+type Props = { size?: 'lg' | 'sm' };
+
+/** Horizontal lockup: square "P" mark + wordmark + "MOBILE" pill. Used on Login and the Dashboard header. */
+export function BrandSignature({ size = 'lg' }: Props) {
+  const compact = size === 'sm';
+  return (
+    <View accessibilityLabel="PRODEX Mobile" style={styles.row}>
+      <View style={[styles.mark, compact && styles.markSm]}><Text style={[styles.markText, compact && styles.markTextSm]}>P</Text></View>
+      <Text style={[styles.wordmark, compact && styles.wordmarkSm]}>PRODEX</Text>
+      <View style={styles.pill}><Text style={styles.pillText}>MOBILE</Text></View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  brand: { alignItems: 'center', paddingVertical: spacing.xl },
-  wordmark: { color: colors.ink, fontSize: 39, letterSpacing: -1.8, fontWeight: fontWeights.heavy },
-  label: { color: colors.brand, fontSize: 10, letterSpacing: 5, fontWeight: fontWeights.bold, marginTop: 3 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  mark: { width: 34, height: 34, borderRadius: radii.xs, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
+  markSm: { width: 28, height: 28 },
+  markText: { color: colors.white, fontSize: 17, fontWeight: fontWeights.heavy },
+  markTextSm: { fontSize: 14 },
+  wordmark: { color: colors.ink, fontSize: 19, letterSpacing: -0.4, fontWeight: fontWeights.heavy },
+  wordmarkSm: { fontSize: 16 },
+  pill: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.pill, backgroundColor: colors.brandSoft },
+  pillText: { color: colors.brand, fontSize: 10, letterSpacing: 0.6, fontWeight: fontWeights.bold },
 });
