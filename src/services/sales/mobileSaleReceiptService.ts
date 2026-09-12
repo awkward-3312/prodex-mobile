@@ -51,6 +51,12 @@ function mapApiError(error: ApiError): MobileSaleReceiptError {
   return new MobileSaleReceiptError('invalid_response', 'Unexpected receipt error');
 }
 
+/** Never reveal whether a sale exists in another tenant/branch: 403 and 404 share one message. */
+export function mobileSaleReceiptMessage(status: MobileSaleReceiptErrorStatus): string {
+  if (status === 'forbidden' || status === 'not_found') return 'No tienes acceso a esta venta.';
+  return 'No pudimos cargar la factura.';
+}
+
 export async function getMobileSaleReceipt({ baseUrl, accessToken, saleId, signal }: { baseUrl: string; accessToken: string; saleId: string | number; signal?: AbortSignal }): Promise<MobileSaleReceipt> {
   const url = `${baseUrl.replace(/\/$/, '')}/api/mobile/sales/${encodeURIComponent(String(saleId))}/receipt`;
   try {

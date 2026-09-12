@@ -245,6 +245,11 @@ export function mobileSaleKey(sale: MobileSale): string {
   return String(sale.sale_id);
 }
 
+/** Route for the official invoice screen - carries only the sale id, never a token or html. */
+export function saleReceiptRoute(saleId: string | number): `/sales/${string}` {
+  return `/sales/${encodeURIComponent(String(saleId))}`;
+}
+
 export function mergeMobileSalesPages(current: MobileSale[], incoming: MobileSale[]): MobileSale[] {
   const seen = new Set(current.map(mobileSaleKey));
   const merged = [...current];

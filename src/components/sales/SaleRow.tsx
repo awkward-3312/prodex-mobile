@@ -1,12 +1,14 @@
+import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, fontWeights, radii, spacing, typography } from '../../theme';
 import type { MobileSale } from '../../types/mobileSales';
 import { formatCurrency, parseMinorUnits } from '../../utils/formatCurrency';
+import { PressableScale } from '../motion';
 import { StatusBadge } from '../ui/StatusBadge';
 
-type Props = { sale: MobileSale };
+type Props = { sale: MobileSale; onPress?: (sale: MobileSale) => void };
 
 const STATUS_LABEL: Record<MobileSale['payment_status'], string> = {
   paid: 'Pagada',
@@ -36,28 +38,43 @@ function formatSaleDateTime(value: string): string {
   return `${datePortion}, ${timePortion}`;
 }
 
-export const SaleRow = memo(function SaleRow({ sale }: Props) {
+export const SaleRow = memo(function SaleRow({ sale, onPress }: Props) {
   const customerName = sale.customer?.name ?? 'Cliente no registrado';
+  const totalLabel = formatCurrency(parseMinorUnits(sale.grand_total) / 100);
+  const content = (
+    <View style={styles.main}>
+      <View style={styles.topLine}>
+        <Text style={styles.reference} numberOfLines={1}>{sale.reference}</Text>
+        <Text style={styles.total} numberOfLines={1}>{totalLabel}</Text>
+      </View>
+      <View style={styles.bottomLine}>
+        <Text style={styles.meta} numberOfLines={1}>{customerName}</Text>
+        <StatusBadge label={STATUS_LABEL[sale.payment_status]} tone={sale.payment_status === 'paid' ? 'positive' : 'warning'} />
+      </View>
+      <Text style={styles.date}>{formatSaleDateTime(sale.date)}</Text>
+    </View>
+  );
+
+  if (!onPress) return <View style={styles.row}>{content}</View>;
 
   return (
-    <View style={styles.row}>
-      <View style={styles.main}>
-        <View style={styles.topLine}>
-          <Text style={styles.reference} numberOfLines={1}>{sale.reference}</Text>
-          <Text style={styles.total} numberOfLines={1}>{formatCurrency(parseMinorUnits(sale.grand_total) / 100)}</Text>
-        </View>
-        <View style={styles.bottomLine}>
-          <Text style={styles.meta} numberOfLines={1}>{customerName}</Text>
-          <StatusBadge label={STATUS_LABEL[sale.payment_status]} tone={sale.payment_status === 'paid' ? 'positive' : 'warning'} />
-        </View>
-        <Text style={styles.date}>{formatSaleDateTime(sale.date)}</Text>
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel={`Abrir factura ${sale.reference}, total ${totalLabel}`}
+      onPress={() => onPress(sale)}
+      style={styles.row}
+    >
+      <View style={styles.rowInner}>
+        {content}
+        <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
       </View>
-    </View>
+    </PressableScale>
   );
 });
 
 const styles = StyleSheet.create({
   row: { minHeight: 104, justifyContent: 'center', padding: spacing.lg, marginBottom: spacing.sm, borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  rowInner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   main: { flex: 1, gap: 7 },
   topLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   reference: { flex: 1, color: colors.ink, fontSize: typography.body, fontWeight: fontWeights.semibold },

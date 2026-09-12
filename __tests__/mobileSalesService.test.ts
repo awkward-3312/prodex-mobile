@@ -4,6 +4,7 @@ import {
   mergeMobileSalesPages,
   mobileSaleKey,
   MobileSalesError,
+  saleReceiptRoute,
 } from '../src/services/sales/mobileSalesService';
 import type { MobileSale } from '../src/types/mobileSales';
 
@@ -155,5 +156,12 @@ describe('mobile sales pagination helpers', () => {
 
   it('keys sales by sale_id', () => {
     expect(mobileSaleKey(sale({ sale_id: 7 }))).toBe('7');
+  });
+});
+
+describe('saleReceiptRoute', () => {
+  it('builds a route carrying only the sale id, never a token or html', () => {
+    expect(saleReceiptRoute(25)).toBe('/sales/25');
+    expect(saleReceiptRoute('SL_0025')).toBe('/sales/SL_0025');
   });
 });

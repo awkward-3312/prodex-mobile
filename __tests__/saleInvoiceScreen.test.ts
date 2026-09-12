@@ -24,6 +24,7 @@ jest.mock('../src/components/motion', () => {
 });
 
 import { SaleInvoiceScreen } from '../src/components/pos/payment/SaleInvoiceScreen';
+import { SaleConfirmation } from '../src/components/pos/payment/SaleConfirmation';
 import type { SaleAttempt } from '../src/types/mobileSaleSubmission';
 
 const attempt: SaleAttempt = {
@@ -51,6 +52,20 @@ async function flush() {
   await act(async () => { await Promise.resolve(); await Promise.resolve(); });
 }
 
+// Mirrors app/pos/checkout.tsx's real wiring: SaleInvoiceScreen driven by the confirmed
+// attempt, falling back to SaleConfirmation (with a retry) if the receipt fails to load.
+function renderCheckoutInvoice(onNewSale: () => void, onSales: () => void, onSessionExpired?: () => void) {
+  return React.createElement(SaleInvoiceScreen, {
+    saleId: attempt.response!.sale.id,
+    baseUrl: 'https://tenant.example',
+    accessToken: 'token-1',
+    primaryAction: { label: 'Nueva venta', onPress: onNewSale },
+    secondaryAction: { label: 'Ver ventas', onPress: onSales },
+    onSessionExpired,
+    renderFallback: (retry: () => void) => React.createElement(SaleConfirmation, { attempt, onNewSale, onSales, onRetryInvoice: retry }),
+  });
+}
+
 beforeEach(() => {
   mockGetReceipt.mockReset();
   mockWebView.mockReset();
@@ -62,9 +77,7 @@ it('fetches the receipt with the mobile bearer session and renders it as the suc
   const onSales = jest.fn();
 
   let root!: ReturnType<typeof create>;
-  await act(async () => {
-    root = create(React.createElement(SaleInvoiceScreen, { attempt, baseUrl: 'https://tenant.example', accessToken: 'token-1', onNewSale, onSales }));
-  });
+  await act(async () => { root = create(renderCheckoutInvoice(onNewSale, onSales)); });
 
   expect(mockGetReceipt).toHaveBeenCalledWith(expect.objectContaining({ baseUrl: 'https://tenant.example', accessToken: 'token-1', saleId: 5 }));
   expect(mockWebView).toHaveBeenCalledWith(expect.objectContaining({ source: { html: '<html>factura oficial</html>' } }));
@@ -81,9 +94,7 @@ it('shows a loading state before the receipt resolves', async () => {
   mockGetReceipt.mockImplementation(() => new Promise((resolve) => { resolveReceipt = resolve; }));
 
   let root!: ReturnType<typeof create>;
-  act(() => {
-    root = create(React.createElement(SaleInvoiceScreen, { attempt, baseUrl: 'https://tenant.example', accessToken: 'token-1', onNewSale: jest.fn(), onSales: jest.fn() }));
-  });
+  act(() => { root = create(renderCheckoutInvoice(jest.fn(), jest.fn())); });
 
   expect(findAllText(root)).toContain('Cargando factura...');
   expect(mockWebView).not.toHaveBeenCalled();
@@ -98,9 +109,7 @@ it('keeps the sale as confirmed and offers a retry when the receipt endpoint fai
   const onSales = jest.fn();
 
   let root!: ReturnType<typeof create>;
-  await act(async () => {
-    root = create(React.createElement(SaleInvoiceScreen, { attempt, baseUrl: 'https://tenant.example', accessToken: 'token-1', onNewSale, onSales }));
-  });
+  await act(async () => { root = create(renderCheckoutInvoice(onNewSale, onSales)); });
 
   const texts = findAllText(root);
   expect(texts).toContain('Venta registrada');
@@ -113,4 +122,15 @@ it('keeps the sale as confirmed and offers a retry when the receipt endpoint fai
 
   expect(mockGetReceipt).toHaveBeenCalledTimes(2);
   expect(mockWebView).toHaveBeenCalledWith(expect.objectContaining({ source: { html: '<html>recovered</html>' } }));
+});
+
+it('calls onSessionExpired on a 401 instead of showing the fallback, and never fetches twice on mount (no render loop)', async () => {
+  const { MobileSaleReceiptError } = jest.requireActual('../src/services/sales/mobileSaleReceiptService');
+  mockGetReceipt.mockRejectedValue(new MobileSaleReceiptError('session_expired', 'Session expired'));
+  const onSessionExpired = jest.fn();
+
+  await act(async () => { create(renderCheckoutInvoice(jest.fn(), jest.fn(), onSessionExpired)); await flush(); });
+
+  expect(onSessionExpired).toHaveBeenCalledTimes(1);
+  expect(mockGetReceipt).toHaveBeenCalledTimes(1);
 });

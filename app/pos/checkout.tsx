@@ -1,3 +1,4 @@
+import { SaleConfirmation } from '../../src/components/pos/payment/SaleConfirmation';
 import { SaleInvoiceScreen } from '../../src/components/pos/payment/SaleInvoiceScreen';
 import type { SalePreflightRequest } from '../../src/types/mobilePosSalePreflight';
 import { saleSubmissionMessage } from '../../src/services/sales/mobileSaleSubmissionService';
@@ -315,7 +316,17 @@ export default function CheckoutScreen() {
     if (await cart.saleSubmission.finish()) router.replace(destination);
   };
   if (cart.submission.status === 'success' && cart.submission.attempt?.response) {
-    return <SaleInvoiceScreen attempt={cart.submission.attempt} baseUrl={session?.baseUrl ?? ''} accessToken={session?.accessToken ?? ''} error={cart.submission.error?.message} onNewSale={() => { void leaveSuccess('/(tabs)/pos'); }} onSales={() => { void leaveSuccess('/(tabs)/sales'); }} />;
+    const attempt = cart.submission.attempt;
+    const attemptError = cart.submission.error?.message;
+    return <SaleInvoiceScreen
+      saleId={attempt.response!.sale.id}
+      baseUrl={session?.baseUrl ?? ''}
+      accessToken={session?.accessToken ?? ''}
+      primaryAction={{ label: 'Nueva venta', onPress: () => { void leaveSuccess('/(tabs)/pos'); } }}
+      secondaryAction={{ label: 'Ver ventas', onPress: () => { void leaveSuccess('/(tabs)/sales'); } }}
+      onSessionExpired={() => { void signOut(); }}
+      renderFallback={(retry) => <SaleConfirmation attempt={attempt} error={attemptError} onNewSale={() => { void leaveSuccess('/(tabs)/pos'); }} onSales={() => { void leaveSuccess('/(tabs)/sales'); }} onRetryInvoice={retry} />}
+    />;
   }
   if (cart.cartLocked) {
     const busy = cart.submission.status === 'submitting' || cart.submission.status === 'loading';

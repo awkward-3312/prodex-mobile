@@ -1,4 +1,5 @@
 import { usePosCart } from '../../src/context/PosCartContext';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +11,7 @@ import { AppHeader } from '../../src/components/ui/AppHeader';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { SearchField } from '../../src/components/ui/SearchField';
 import { useAuth } from '../../src/context/AuthContext';
-import { getMobileSales, mergeMobileSalesPages, mobileSaleKey, MobileSalesError } from '../../src/services/sales/mobileSalesService';
+import { getMobileSales, mergeMobileSalesPages, mobileSaleKey, MobileSalesError, saleReceiptRoute } from '../../src/services/sales/mobileSalesService';
 import { colors, fontWeights, spacing } from '../../src/theme';
 import type { MobileSale, MobileSalePagination, MobileSalePaymentStatus } from '../../src/types/mobileSales';
 
@@ -151,7 +152,11 @@ export default function SalesScreen() {
     setPaymentStatus(null);
   };
 
-  const renderRow = useCallback(({ item }: { item: MobileSale }) => <SaleRow sale={item} />, []);
+  const openSaleReceipt = useCallback((sale: MobileSale) => {
+    router.push(saleReceiptRoute(sale.sale_id));
+  }, []);
+
+  const renderRow = useCallback(({ item }: { item: MobileSale }) => <SaleRow sale={item} onPress={openSaleReceipt} />, [openSaleReceipt]);
 
   const renderHeader = () => (
     <FadeInView distance={6}>
