@@ -45,13 +45,31 @@ beforeEach(() => {
   mockPermissions = [];
 });
 
-it('hides Clientes and Reportes when the user has neither permission', () => {
+it('hides Clientes, Caja and Reportes when the user has none of those permissions', () => {
   let root!: ReturnType<typeof create>;
   act(() => { root = create(React.createElement(MoreScreen)); });
   const texts = findAllText(root);
   expect(texts).not.toContain('Clientes');
+  expect(texts).not.toContain('Caja');
   expect(texts).not.toContain('Reportes');
   expect(texts).toContain('Cerrar sesión');
+});
+
+it('shows Caja when the user has Pos_view, and it navigates to /cash-register', () => {
+  mockPermissions = ['Pos_view'];
+  let root!: ReturnType<typeof create>;
+  act(() => { root = create(React.createElement(MoreScreen)); });
+  expect(findAllText(root)).toContain('Caja');
+
+  pressByLabel(root, 'Caja');
+  expect(mockPush).toHaveBeenCalledWith('/cash-register');
+});
+
+it('shows Caja when the user has cash_register_report, even without Pos_view', () => {
+  mockPermissions = ['cash_register_report'];
+  let root!: ReturnType<typeof create>;
+  act(() => { root = create(React.createElement(MoreScreen)); });
+  expect(findAllText(root)).toContain('Caja');
 });
 
 it('shows Clientes only when the user has Clients_view, and it navigates to /clients', () => {

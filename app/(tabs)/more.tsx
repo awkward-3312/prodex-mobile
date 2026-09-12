@@ -47,6 +47,7 @@ export default function MoreScreen() {
   const appVersion = Constants.expoConfig?.version;
 
   const canViewClients = hasPermission('Customers_view');
+  const canViewCashRegister = hasPermission('Pos_view') || hasPermission('cash_register_report');
   const canViewReports = hasPermission('Reports_sales');
 
   return (
@@ -62,9 +63,10 @@ export default function MoreScreen() {
           </View>
         </FadeInView>
 
-        {(canViewClients || canViewReports) && (
+        {(canViewClients || canViewCashRegister || canViewReports) && (
           <Section title="OPERACIÓN">
             {canViewClients ? <MenuRow icon="people-outline" label="Clientes" onPress={() => router.push('/clients')} /> : null}
+            {canViewCashRegister ? <MenuRow icon="cash-outline" label="Caja" onPress={() => router.push('/cash-register')} /> : null}
           </Section>
         )}
 
