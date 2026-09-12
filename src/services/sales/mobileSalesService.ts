@@ -102,7 +102,7 @@ function parseFiscal(value: unknown): MobileSaleFiscal | null {
   return { number: asNullableString(value.number), status: asNullableString(value.status) };
 }
 
-function parseSale(value: unknown): MobileSale | null {
+export function parseMobileSale(value: unknown): MobileSale | null {
   if (!isRecord(value)) return null;
   const saleId = asString(value.sale_id);
   const reference = asString(value.reference);
@@ -160,7 +160,7 @@ export function parseMobileSalesResponse(payload: unknown): MobileSalesResponse 
   }
 
   const pagination = parsePagination(data.pagination);
-  const items = data.items.map(parseSale);
+  const items = data.items.map(parseMobileSale);
 
   if (!pagination || items.some((item) => item === null)) {
     throw new MobileSalesError('invalid_response', 'Malformed sales response');

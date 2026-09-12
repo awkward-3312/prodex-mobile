@@ -1,6 +1,8 @@
 import { UserAvatar } from '../../src/components/ui/UserAvatar';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -17,12 +19,35 @@ function entityName(value: unknown) {
   return isRecord(value) && typeof value.name === 'string' ? value.name : null;
 }
 
+function MenuRow({ icon, label, onPress, tone = 'default' }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; tone?: 'default' | 'danger' }) {
+  const color = tone === 'danger' ? colors.red : colors.ink;
+  return (
+    <PressableScale accessibilityLabel={label} accessibilityRole="button" onPress={onPress} style={styles.row}>
+      <View style={[styles.rowIcon, tone === 'danger' && styles.rowIconDanger]}><Ionicons name={icon} size={18} color={tone === 'danger' ? colors.red : colors.brand} /></View>
+      <Text style={[styles.rowLabel, { color }]}>{label}</Text>
+      {tone !== 'danger' ? <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} /> : null}
+    </PressableScale>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <FadeInView style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionBody}>{children}</View>
+    </FadeInView>
+  );
+}
+
 export default function MoreScreen() {
-  const { user, tenant, operationalContext, signOut } = useAuth();
+  const { user, tenant, operationalContext, signOut, hasPermission } = useAuth();
   const displayName = user?.name ?? user?.email ?? 'Usuario PRODEX';
   const tenantName = tenant?.company_name ? String(tenant.company_name) : 'Empresa activa';
   const branchName = entityName(operationalContext?.branch) ?? entityName(operationalContext?.inventory_location);
   const appVersion = Constants.expoConfig?.version;
+
+  const canViewClients = hasPermission('Customers_view');
+  const canViewReports = hasPermission('Reports_sales');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -36,7 +61,23 @@ export default function MoreScreen() {
             <Text style={styles.tenant} numberOfLines={1}>{tenantName}{branchName ? ` · ${branchName}` : ''}</Text>
           </View>
         </FadeInView>
-        <PressableScale accessibilityLabel="Cerrar sesión" accessibilityRole="button" onPress={signOut} style={styles.logout}><Ionicons name="log-out-outline" size={18} color={colors.red} /><Text style={styles.logoutText}>Cerrar sesión</Text></PressableScale>
+
+        {(canViewClients || canViewReports) && (
+          <Section title="OPERACIÓN">
+            {canViewClients ? <MenuRow icon="people-outline" label="Clientes" onPress={() => router.push('/clients')} /> : null}
+          </Section>
+        )}
+
+        {canViewReports && (
+          <Section title="GESTIÓN">
+            <MenuRow icon="bar-chart-outline" label="Reportes" onPress={() => router.push('/reports')} />
+          </Section>
+        )}
+
+        <Section title="CUENTA">
+          <MenuRow icon="log-out-outline" label="Cerrar sesión" onPress={signOut} tone="danger" />
+        </Section>
+
         {appVersion ? <Text style={styles.version}>PRODEX Mobile v{appVersion}</Text> : null}
       </ScrollView>
     </SafeAreaView>
@@ -51,7 +92,12 @@ const styles = StyleSheet.create({
   accountLabel: { color: colors.brand, fontSize: typography.label, fontWeight: fontWeights.bold },
   name: { marginTop: 2, color: colors.ink, fontSize: 18, fontWeight: fontWeights.bold },
   tenant: { marginTop: 2, color: colors.inkMuted, fontSize: typography.caption },
-  logout: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.xl, borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
-  logoutText: { color: colors.red, fontSize: typography.button, fontWeight: fontWeights.semibold },
+  section: { marginTop: spacing.xl },
+  sectionTitle: { marginBottom: spacing.sm, color: colors.inkMuted, fontSize: 11, fontWeight: fontWeights.bold, letterSpacing: 0.4 },
+  sectionBody: { ...surfaces.card, paddingHorizontal: spacing.lg, paddingVertical: spacing.xs },
+  row: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
+  rowIcon: { width: 32, height: 32, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
+  rowIconDanger: { backgroundColor: colors.redSoft },
+  rowLabel: { flex: 1, fontSize: typography.body, fontWeight: fontWeights.semibold },
   version: { marginTop: spacing.lg, color: colors.inkMuted, fontSize: 11, textAlign: 'center' },
 });
