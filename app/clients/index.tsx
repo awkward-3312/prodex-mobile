@@ -1,10 +1,10 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ClientRow } from '../../src/components/clients/ClientRow';
-import { FadeInView } from '../../src/components/motion';
+import { FadeInView, PressableScale } from '../../src/components/motion';
 import { AppHeader } from '../../src/components/ui/AppHeader';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { SearchField } from '../../src/components/ui/SearchField';
@@ -39,7 +39,7 @@ function mergeClientPages(current: ClientSearchResult[], incoming: ClientSearchR
 
 export default function ClientsScreen() {
   const insets = useSafeAreaInsets();
-  const { session, signOut } = useAuth();
+  const { session, signOut, hasPermission } = useAuth();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [clients, setClients] = useState<ClientSearchResult[]>([]);
@@ -141,6 +141,7 @@ export default function ClientsScreen() {
   const renderHeader = () => (
     <FadeInView distance={6}>
       <AppHeader title="Clientes" subtitle="Directorio del tenant" onBack={() => router.back()} />
+      {hasPermission?.('Customers_add') ? <PressableScale accessibilityRole="button" onPress={() => router.push('/clients/manage')} style={{ padding: spacing.md, backgroundColor: colors.brand }}><Text style={{ color: colors.white }}>Nuevo cliente</Text></PressableScale> : null}
       <SearchField
         accessibilityLabel="Buscar cliente por nombre, teléfono o RTN"
         placeholder="Buscar por nombre, teléfono o RTN"

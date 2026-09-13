@@ -13,7 +13,7 @@ jest.mock('../src/components/motion', () => {
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
-jest.mock('expo-router', () => ({ router: { push: (...args: unknown[]) => mockPush(...args), back: () => mockBack() } }));
+jest.mock('expo-router', () => ({ useFocusEffect: (effect: any) => jest.requireActual('react').useEffect(effect, [effect]), router: { push: (...args: unknown[]) => mockPush(...args), back: () => mockBack() } }));
 
 const mockSearchClients = jest.fn();
 jest.mock('../src/services/clients/mobileClientsService', () => ({
@@ -22,8 +22,9 @@ jest.mock('../src/services/clients/mobileClientsService', () => ({
 }));
 
 const mockSignOut = jest.fn();
+let mockCanManage = false;
 jest.mock('../src/context/AuthContext', () => ({
-  useAuth: () => ({ session: { baseUrl: 'https://tenant.example', accessToken: 'token-1' }, signOut: mockSignOut }),
+  useAuth: () => ({ session: { baseUrl: 'https://tenant.example', accessToken: 'token-1' }, signOut: mockSignOut, hasPermission: (permission: string) => mockCanManage && permission === 'Customers_add' }),
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -50,6 +51,7 @@ async function advanceDebounce() {
 }
 
 beforeEach(() => {
+  mockCanManage = false;
   mockSearchClients.mockReset();
   mockPush.mockReset();
   mockSignOut.mockReset();
@@ -143,4 +145,22 @@ it('tapping a client navigates to its detail route', async () => {
   const button = root.root.findAll((node) => node.props.accessibilityLabel === 'Ver cliente Cliente Cuarenta y Dos' && typeof node.props.onPress === 'function')[0];
   act(() => { button.props.onPress(); });
   expect(mockPush).toHaveBeenCalledWith('/clients/42');
+});
+
+it('shows Nuevo cliente only with Customers_add and refreshes on returning focus', async () => {
+  mockSearchClients.mockResolvedValue({ items: [], pagination: { page: 1, per_page: 30, total: 0, last_page: 1, has_more: false } });
+  let root!: ReturnType<typeof create>;
+  await act(async () => { root = create(React.createElement(ClientsScreen)); });
+  expect(findAllText(root)).not.toContain('Nuevo cliente');
+  mockCanManage = true;
+  act(() => root.update(React.createElement(ClientsScreen)));
+  expect(findAllText(root)).toContain('Nuevo cliente');
+  const button = root.root.findAll(node => node.props.accessibilityRole === 'button' && typeof node.props.onPress === 'function' && node.findAllByType(Text).some(child => child.props.children === 'Nuevo cliente'))[0];
+  act(() => button.props.onPress());
+  expect(mockPush).toHaveBeenCalledWith('/clients/manage');
+  act(() => root.unmount());
+  const calls = mockSearchClients.mock.calls.length;
+  await act(async () => { root = create(React.createElement(ClientsScreen)); });
+  expect(mockSearchClients.mock.calls.length).toBeGreaterThan(calls);
+  act(() => root.unmount());
 });

@@ -18,7 +18,7 @@ function isAbortError(error: unknown) {
     || (isRecord(error) && error.name === 'AbortError');
 }
 
-async function request<T>(method: 'GET' | 'POST', url: string, options: RequestOptions = {}) {
+async function request<T>(method: 'GET' | 'POST' | 'PUT', url: string, options: RequestOptions = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), authConfig.requestTimeoutMs);
 
@@ -55,6 +55,7 @@ async function request<T>(method: 'GET' | 'POST', url: string, options: RequestO
 }
 
 export const apiClient = {
+  put: <T>(url: string, body?: unknown, options?: Omit<RequestOptions, 'body'>) => request<T>('PUT', url, { ...options, body }),
   get: <T>(url: string, options?: RequestOptions) => request<T>('GET', url, options),
   post: <T>(url: string, body?: unknown, options?: Omit<RequestOptions, 'body'>) => request<T>('POST', url, { ...options, body }),
 };

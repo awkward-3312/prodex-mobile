@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,7 +27,7 @@ function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap;
 
 export default function ClientDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { session, signOut } = useAuth();
+  const { session, signOut, hasPermission } = useAuth();
   const [client, setClient] = useState<MobileClientDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -54,10 +54,10 @@ export default function ClientDetailScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, session?.baseUrl, session?.accessToken]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     load();
     return () => abortRef.current?.abort();
-  }, [load]);
+  }, [load]));
 
   const goBack = () => router.back();
 
@@ -65,6 +65,7 @@ export default function ClientDetailScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <AppHeader title="Cliente" onBack={goBack} />
+        {hasPermission?.('Customers_edit') && client ? <PressableScale accessibilityRole="button" onPress={() => router.push({ pathname: '/clients/manage', params: { clientId: String(client.id) } })}><Text>Editar cliente</Text></PressableScale> : null}
         {loading ? (
           <View style={styles.center}><ActivityIndicator color={colors.brand} /></View>
         ) : errorMessage ? (

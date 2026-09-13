@@ -1,0 +1,58 @@
+import React from 'react';
+import { act, create } from 'react-test-renderer';
+import { Text, TextInput } from 'react-native';
+let mockAllowed = true;
+const mockSignOut = jest.fn();
+const mockCreate = jest.fn(); const mockUpdate = jest.fn(); const mockLoad = jest.fn();
+const mockRemove = jest.fn(async () => {});
+let mockStored: string | null = null;
+const mockUuid = jest.fn();
+jest.mock('expo-crypto', () => ({ randomUUID: () => mockUuid() }));
+jest.mock('expo-secure-store', () => ({ getItemAsync: async () => mockStored, setItemAsync: async (_key: string, value: string) => { mockStored = value; }, deleteItemAsync: async () => { mockRemove(); mockStored = null; } }));
+jest.mock('../src/context/AuthContext', () => ({ useAuth: () => ({ user: { id: 1 }, session: { baseUrl: 'https://tenant.example', accessToken: 'token' }, hasPermission: () => mockAllowed, signOut: mockSignOut }) }));
+jest.mock('../src/components/motion', () => ({ PressableScale: (props: any) => jest.requireActual('react').createElement(jest.requireActual('react-native').Pressable, props) }));
+jest.mock('../src/services/clients/customerManagementService', () => ({ ...jest.requireActual('../src/services/clients/customerManagementService'), createCustomer: (...args: unknown[]) => mockCreate(...args), updateCustomer: (...args: unknown[]) => mockUpdate(...args), loadEditableCustomer: (...args: unknown[]) => mockLoad(...args), loadCustomerConfiguration: async () => 'NIT' }));
+import { CustomerEditor } from '../src/components/clients/CustomerEditor';
+import { emptyCustomer, CustomerWriteError } from '../src/services/clients/customerManagementService';
+const customer = { ...emptyCustomer(), name: 'Ana', phone: '123', id: 3, code: '3' };
+const flush = async () => { for (let i = 0; i < 15; i++) await Promise.resolve(); };
+const text = (root: ReturnType<typeof create>) => JSON.stringify(root.toJSON());
+const press = (root: ReturnType<typeof create>, label: string) => root.root.findAll(node => node.props.accessibilityRole === 'button' && typeof node.props.onPress === 'function' && node.findAllByType(Text).some(child => child.props.children === label))[0].props.onPress();
+beforeEach(() => { jest.clearAllMocks(); mockAllowed = true; mockStored = null; mockUuid.mockReturnValue('123e4567-e89b-42d3-a456-426614174000'); mockCreate.mockResolvedValue(customer); mockUpdate.mockResolvedValue(customer); mockLoad.mockResolvedValue(customer); });
+it.each(['clients', 'pos'] as const)('renders fields, validates, blocks double submit and returns canonical result to %s', async origin => {
+  const onSuccess = jest.fn(); let root!: ReturnType<typeof create>;
+  await act(async () => { root = create(React.createElement(CustomerEditor, { origin, onSuccess, onCancel: jest.fn() })); await flush(); });
+  expect(text(root)).toContain('NIT'); expect(root.root.findAllByType(TextInput)).toHaveLength(11);
+  await act(async () => { press(root, 'Guardar cliente'); await flush(); });
+  expect(mockCreate).not.toHaveBeenCalled();
+  act(() => root.root.findByProps({ accessibilityLabel: 'Nombre o razón social *' }).props.onChangeText('Ana'));
+  await act(async () => { press(root, 'Guardar cliente'); press(root, 'Guardar cliente'); await flush(); });
+  expect(mockCreate).toHaveBeenCalledTimes(1); expect(onSuccess).toHaveBeenCalledWith(customer); expect(mockRemove).toHaveBeenCalledTimes(1);
+  act(() => root.unmount());
+});
+it('denies create/edit without permission', async () => {
+  mockAllowed = false; let root!: ReturnType<typeof create>;
+  await act(async () => { root = create(React.createElement(CustomerEditor, { origin: 'clients', clientId: '3', onSuccess: jest.fn(), onCancel: jest.fn() })); });
+  expect(text(root)).toContain('No tienes permiso'); expect(mockLoad).not.toHaveBeenCalled(); expect(root.root.findAllByType(TextInput)).toHaveLength(0);
+  act(() => root.unmount());
+});
+it('loads edit values, retains draft on validation error and returns refreshed customer', async () => {
+  const onSuccess = jest.fn(); let root!: ReturnType<typeof create>;
+  await act(async () => { root = create(React.createElement(CustomerEditor, { origin: 'clients', clientId: '3', onSuccess, onCancel: jest.fn() })); await flush(); });
+  expect(root.root.findByProps({ accessibilityLabel: 'Nombre o razón social *' }).props.value).toBe('Ana');
+  mockUpdate.mockRejectedValueOnce(new CustomerWriteError('definitive', 'validation_error', { name: 'Revisa este campo.' }));
+  await act(async () => { press(root, 'Guardar cliente'); await flush(); });
+  expect(text(root)).toContain('Revisa este campo.'); expect(onSuccess).not.toHaveBeenCalled();
+  await act(async () => { press(root, 'Guardar cliente'); await flush(); });
+  expect(onSuccess).toHaveBeenCalledWith(customer); expect(mockCreate).not.toHaveBeenCalled();
+  act(() => root.unmount());
+});
+it('restores a pending creation without automatically sending', async () => {
+  mockStored = JSON.stringify({ version: 1, owner: 'https://tenant.example|1', request: { operation_uuid: '123e4567-e89b-42d3-a456-426614174000', customer: { ...emptyCustomer(), name: 'Frozen' } } });
+  let root!: ReturnType<typeof create>;
+  await act(async () => { root = create(React.createElement(CustomerEditor, { origin: 'clients', onSuccess: jest.fn(), onCancel: jest.fn() })); await flush(); });
+  expect(mockCreate).not.toHaveBeenCalled(); expect(text(root)).toContain('Reintentar creación');
+  await act(async () => { press(root, 'Reintentar creación'); await flush(); });
+  expect(mockCreate.mock.calls[0][2].customer.name).toBe('Frozen');
+  act(() => root.unmount());
+});

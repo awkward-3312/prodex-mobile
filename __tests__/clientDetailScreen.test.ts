@@ -14,7 +14,7 @@ jest.mock('../src/components/motion', () => {
 const mockBack = jest.fn();
 const mockPush = jest.fn();
 const mockSearchParams: { id?: string } = { id: '42' };
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () => ({ useFocusEffect: (effect: any) => jest.requireActual('react').useEffect(effect, [effect]),
   router: { back: () => mockBack(), push: (...args: unknown[]) => mockPush(...args) },
   useLocalSearchParams: () => mockSearchParams,
 }));
@@ -26,8 +26,9 @@ jest.mock('../src/services/clients/mobileClientDetailService', () => ({
 }));
 
 const mockSignOut = jest.fn();
+let mockCanManage = false;
 jest.mock('../src/context/AuthContext', () => ({
-  useAuth: () => ({ session: { baseUrl: 'https://tenant.example', accessToken: 'token-1' }, signOut: mockSignOut }),
+  useAuth: () => ({ session: { baseUrl: 'https://tenant.example', accessToken: 'token-1' }, signOut: mockSignOut, hasPermission: (permission: string) => mockCanManage && permission === 'Customers_edit' }),
 }));
 
 import ClientDetailScreen from '../app/clients/[id]';
@@ -42,6 +43,7 @@ async function flush() {
 }
 
 beforeEach(() => {
+  mockCanManage = false;
   mockGetClient.mockReset();
   mockBack.mockReset();
   mockPush.mockReset();
@@ -114,4 +116,17 @@ it('does not refetch on re-render (no loop)', async () => {
   await act(async () => { root = create(React.createElement(ClientDetailScreen)); await flush(); });
   await act(async () => { root.update(React.createElement(ClientDetailScreen)); await flush(); });
   expect(mockGetClient).toHaveBeenCalledTimes(1);
+});
+
+it('shows Editar cliente only with Customers_edit', async () => {
+  mockGetClient.mockResolvedValue({ id: 42, name: 'Ana', rtn: null, phone: null, email: null, address: null, balance: '0.00', recentSales: [] });
+  let root!: ReturnType<typeof create>;
+  await act(async () => { root = create(React.createElement(ClientDetailScreen)); });
+  expect(root.root.findAllByType(Text).some(node => node.props.children === 'Editar cliente')).toBe(false);
+  mockCanManage = true;
+  act(() => root.update(React.createElement(ClientDetailScreen)));
+  const button = root.root.findAll(node => node.props.accessibilityRole === 'button' && typeof node.props.onPress === 'function' && node.findAllByType(Text).some(child => child.props.children === 'Editar cliente'))[0];
+  act(() => button.props.onPress());
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/clients/manage', params: { clientId: '42' } });
+  act(() => root.unmount());
 });
