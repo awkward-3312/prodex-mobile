@@ -16,20 +16,55 @@ export type AuthenticatedUser = {
   id?: string | number;
   name?: string;
   email?: string;
+  avatar?: string | null;
+  profile_photo_url?: string | null;
+  avatar_url?: string | null;
+  photo_url?: string | null;
+  photo?: string | null;
   [key: string]: unknown;
 };
 
-export type InventoryLocation = {
+export type OperationalEntity = {
   id: string | number;
-  name?: string;
+  name?: string | null;
+  code?: string | null;
+  [key: string]: unknown;
+};
+
+export type Branch = OperationalEntity & {
+  default_warehouse_id?: string | number | null;
+  default_inventory_location_id?: string | number | null;
+};
+
+export type InventoryLocation = OperationalEntity & {
+  branch_id?: string | number | null;
+  type?: string | null;
+  is_sellable?: boolean;
+  is_default_sales?: boolean;
+};
+
+export type CashDrawer = OperationalEntity & {
+  branch_id?: string | number | null;
+  inventory_location_id?: string | number | null;
+  warehouse_id?: string | number | null;
+};
+
+export type OperationalEffectiveContext = {
+  source?: string | null;
+  branch_id?: string | number | null;
+  inventory_location_id?: string | number | null;
+  cash_drawer_id?: string | number | null;
+  legacy_warehouse_id?: string | number | null;
+  can_override?: boolean;
   [key: string]: unknown;
 };
 
 export type OperationalContext = {
-  effective?: {
-    inventory_location_id?: string | number | null;
-    [key: string]: unknown;
-  };
+  effective?: OperationalEffectiveContext | null;
+  branches?: Branch[];
+  inventory_locations?: InventoryLocation[];
+  cash_drawers?: CashDrawer[];
+  ready_for_location_pos?: boolean;
   [key: string]: unknown;
 };
 
