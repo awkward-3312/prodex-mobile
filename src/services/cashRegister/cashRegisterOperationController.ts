@@ -1,20 +1,22 @@
 import { CashRegisterOperationError } from './mobileCashRegisterOperationService';
 import type { CashRegisterOperationResponse } from './mobileCashRegisterOperationService';
 
-export type CashRegisterAttempt<TRequest> = { version: 1; owner: string; kind: string; request: TRequest; response?: CashRegisterOperationResponse };
-export type CashRegisterOperationState<TRequest> = {
+export type CashRegisterAttempt<TRequest, TResult = CashRegisterOperationResponse> = { version: 1; owner: string; kind: string; request: TRequest; response?: TResult };
+export type CashRegisterOperationState<TRequest, TResult = CashRegisterOperationResponse> = {
   status: 'loading' | 'idle' | 'submitting' | 'uncertain' | 'business_error' | 'session_expired' | 'success';
-  attempt: CashRegisterAttempt<TRequest> | null;
+  attempt: CashRegisterAttempt<TRequest, TResult> | null;
   error: CashRegisterOperationError | null;
 };
 export type AttemptStorage = { read: () => Promise<string | null>; write: (value: string) => Promise<void>; remove: () => Promise<void> };
 
-type Dependencies<TRequest> = {
+type Dependencies<TRequest, TResult> = {
   owner: string;
   kind: string;
   storage: AttemptStorage;
-  send: (request: TRequest, token: string) => Promise<CashRegisterOperationResponse>;
-  onSuccess?: (response: CashRegisterOperationResponse) => void;
+  send: (request: TRequest, token: string) => Promise<TResult>;
+  validateRequest?: (request: unknown) => boolean;
+  validateResponse?: (response: unknown, request: TRequest) => boolean;
+  onSuccess?: (response: TResult) => void;
 };
 
 /**
@@ -24,16 +26,16 @@ type Dependencies<TRequest> = {
  * POST. If that write fails, the POST is never sent. A retry always resends the
  * identical stored request/UUID, never a new one.
  */
-export class CashRegisterOperationController<TRequest> {
-  private state: CashRegisterOperationState<TRequest> = { status: 'loading', attempt: null, error: null };
+export class CashRegisterOperationController<TRequest, TResult = CashRegisterOperationResponse> {
+  private state: CashRegisterOperationState<TRequest, TResult> = { status: 'loading', attempt: null, error: null };
   private listeners = new Set<() => void>();
   private busy = false;
   private restored: Promise<void> | null = null;
-  constructor(private deps: Dependencies<TRequest>) {}
+  constructor(private deps: Dependencies<TRequest, TResult>) {}
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   isLocked = () => !['idle', 'business_error'].includes(this.state.status);
-  private update(state: CashRegisterOperationState<TRequest>) { this.state = state; this.listeners.forEach(listener => listener()); }
+  private update(state: CashRegisterOperationState<TRequest, TResult>) { this.state = state; this.listeners.forEach(listener => listener()); }
 
   restore = (): Promise<void> => {
     if (this.restored) return this.restored;
@@ -45,8 +47,10 @@ export class CashRegisterOperationController<TRequest> {
     try {
       const raw = await this.deps.storage.read();
       if (!raw) { this.update({ status: 'idle', attempt: null, error: null }); return; }
-      const attempt = JSON.parse(raw) as CashRegisterAttempt<TRequest>;
+      const attempt = JSON.parse(raw) as CashRegisterAttempt<TRequest, TResult>;
       if (attempt.version !== 1 || attempt.owner !== this.deps.owner || attempt.kind !== this.deps.kind) throw new Error('Invalid saved attempt');
+      if (this.deps.validateRequest && !this.deps.validateRequest(attempt.request)) throw new Error('Invalid saved request');
+      if (attempt.response && this.deps.validateResponse && !this.deps.validateResponse(attempt.response, attempt.request)) throw new Error('Invalid saved response');
       this.update({ status: attempt.response ? 'success' : 'uncertain', attempt, error: null });
       if (attempt.response) this.deps.onSuccess?.(attempt.response);
     } catch {
@@ -60,8 +64,9 @@ export class CashRegisterOperationController<TRequest> {
     if (this.busy || this.state.status === 'success' || this.isLocked()) return;
     this.busy = true;
     try {
-      const request = buildRequest();
-      const attempt: CashRegisterAttempt<TRequest> = { version: 1, owner: this.deps.owner, kind: this.deps.kind, request };
+      const request = JSON.parse(JSON.stringify(buildRequest())) as TRequest;
+      if (this.deps.validateRequest && !this.deps.validateRequest(request)) throw new CashRegisterOperationError('business_error', 'validation_error');
+      const attempt: CashRegisterAttempt<TRequest, TResult> = { version: 1, owner: this.deps.owner, kind: this.deps.kind, request };
       this.update({ status: 'submitting', attempt, error: null });
       // If saving fails, never send. The frozen request stays recoverable for explicit retry.
       await this.deps.storage.write(JSON.stringify(attempt));
@@ -85,8 +90,8 @@ export class CashRegisterOperationController<TRequest> {
     } finally { this.busy = false; }
   }
 
-  private async send(attempt: CashRegisterAttempt<TRequest>, token: string) {
-    let response: CashRegisterOperationResponse;
+  private async send(attempt: CashRegisterAttempt<TRequest, TResult>, token: string) {
+    let response: TResult;
     try {
       response = await this.deps.send(attempt.request, token);
     } catch (error) {

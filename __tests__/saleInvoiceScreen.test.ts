@@ -1,3 +1,5 @@
+jest.mock('../src/context/CashRegisterContext', () => ({ useCashRegister: () => ({ invalidate: jest.fn() }) }));
+jest.mock('../src/components/pos/PosRegisterGuard', () => ({ PosRegisterGuard: ({ children }: any) => children }));
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { Text } from 'react-native';

@@ -29,7 +29,10 @@ export type CashRegisterEntity = { id: string | number; name: string | null } | 
 
 export type CashRegisterPaymentMethodTotal = { id: string | number | null; name: string; category: string; total: string };
 
+export type CashDenominations = { currencyCode: string; bills: string[]; coins: string[] };
+
 export type CashRegisterSummary = {
+  denominations?: CashDenominations;
   transactionCount: number;
   totalSales: string;
   cashSales: string;
@@ -127,6 +130,8 @@ export function parseSummary(value: unknown): CashRegisterSummary | null {
   const methods = Array.isArray(value.sales_by_payment_method) ? value.sales_by_payment_method.map(parsePaymentMethodTotal).filter((row): row is CashRegisterPaymentMethodTotal => row !== null) : [];
 
   return {
+    denominations: isRecord(value.denominations) && Array.isArray(value.denominations.bills) && Array.isArray(value.denominations.coins)
+      ? { currencyCode: String(value.denominations.currency_code), bills: value.denominations.bills.map(String), coins: value.denominations.coins.map(String) } : undefined,
     transactionCount: value.transaction_count,
     totalSales: value.total_sales,
     cashSales: value.cash_sales,

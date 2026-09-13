@@ -1,3 +1,4 @@
+import { PosRegisterGuard } from '../../src/components/pos/PosRegisterGuard';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -39,7 +40,7 @@ function emptyMessage(search: string, categoryId: SelectedCategory) {
   return 'No hay productos disponibles en esta ubicación.';
 }
 
-export default function PosScreen() {
+function PosScreenContent() {
   const { width: windowWidth } = useWindowDimensions();
   const [layoutWidth, setLayoutWidth] = useState(windowWidth);
   const cardWidth = Math.max(0, (layoutWidth - spacing.lg * 2 - spacing.md) / 2);
@@ -303,3 +304,7 @@ const styles = StyleSheet.create({
   emptyTitle: { color: colors.ink, fontSize: 15, fontWeight: fontWeights.bold, textAlign: 'center' },
   emptyText: { marginTop: spacing.sm, color: colors.inkMuted, fontSize: 12, textAlign: 'center' },
 });
+
+export default function PosScreen() {
+  return <PosRegisterGuard><PosScreenContent /></PosRegisterGuard>;
+}

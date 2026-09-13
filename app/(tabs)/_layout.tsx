@@ -6,6 +6,8 @@ import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTimin
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 
+import { useCashRegister } from '../../src/context/CashRegisterContext';
+import { useAuth } from '../../src/context/AuthContext';
 import { colors, fontWeights, motion, radii, spacing } from '../../src/theme';
 
 function TabIcon({ color, focused, name, isPos }: { color: ColorValue; focused: boolean; name: keyof typeof Ionicons.glyphMap; isPos: boolean }) {
@@ -32,6 +34,8 @@ function TabIcon({ color, focused, name, isPos }: { color: ColorValue; focused: 
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { status } = useCashRegister();
+  const { hasPermission } = useAuth();
 
   return (
     <Tabs
@@ -56,7 +60,7 @@ export default function TabsLayout() {
       })}
     >
       <Tabs.Screen name="index" options={{ title: 'Inicio', tabBarAccessibilityLabel: 'Inicio' }} />
-      <Tabs.Screen name="pos" options={{ title: 'POS', tabBarAccessibilityLabel: 'Punto de venta' }} />
+      <Tabs.Screen name="pos" options={{ href: status === 'open' && hasPermission('Pos_view') ? '/(tabs)/pos' : null, title: 'POS', tabBarAccessibilityLabel: 'Punto de venta' }} />
       <Tabs.Screen name="inventory" options={{ title: 'Inventario', tabBarAccessibilityLabel: 'Inventario' }} />
       <Tabs.Screen name="sales" options={{ title: 'Ventas', tabBarAccessibilityLabel: 'Ventas' }} />
       <Tabs.Screen name="more" options={{ title: 'Más', tabBarAccessibilityLabel: 'Más opciones' }} />

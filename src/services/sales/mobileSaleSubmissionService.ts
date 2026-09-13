@@ -18,6 +18,8 @@ export class SaleSubmissionError extends Error {
 
 export function saleSubmissionMessage(code: string): string {
   const messages: Record<string, string> = {
+    cash_register_not_open: 'Necesitas abrir caja antes de registrar una venta.',
+    register_already_closed: 'Esta caja ya está cerrada.',
     insufficient_stock: 'El stock cambió antes de confirmar la venta. Revisa el carrito e inténtalo nuevamente.',
     invalid_client: 'Selecciona un cliente válido antes de confirmar.',
     invalid_quantity: 'Revisa las cantidades del carrito.',
@@ -82,6 +84,7 @@ export async function submitMobileSale({ baseUrl, accessToken, request }: { base
       if (error.status === 401 || error.code === 'token_idle_timeout') throw new SaleSubmissionError('session_expired', 'session_expired');
       if (error.status === 403) throw new SaleSubmissionError('business_error', 'forbidden');
       if (error.status === 422) throw new SaleSubmissionError('business_error', error.code ?? 'validation_error');
+      if (error.status === 409 && error.code === 'cash_register_not_open') throw new SaleSubmissionError('business_error', 'cash_register_not_open');
       if (error.status === 409) throw new SaleSubmissionError('uncertain', 'idempotency_conflict');
       throw new SaleSubmissionError('uncertain', error.code ?? 'server_error');
     }

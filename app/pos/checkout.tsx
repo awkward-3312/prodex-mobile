@@ -1,3 +1,5 @@
+import { useCashRegister } from '../../src/context/CashRegisterContext';
+import { PosRegisterGuard } from '../../src/components/pos/PosRegisterGuard';
 import { SaleConfirmation } from '../../src/components/pos/payment/SaleConfirmation';
 import { SaleInvoiceScreen } from '../../src/components/pos/payment/SaleInvoiceScreen';
 import type { SalePreflightRequest } from '../../src/types/mobilePosSalePreflight';
@@ -25,6 +27,7 @@ type PaymentSelection = string | number | 'mixed' | null;
 const CLIENTS_PER_PAGE = 20;
 
 function checkoutErrorMessage(error: MobilePosCheckoutError) {
+  if (error.code === 'cash_register_not_open') return 'Necesitas abrir caja antes de registrar una venta.';
   if (error.status === 'forbidden') return 'No tienes permiso para usar el checkout móvil.';
   if (error.status === 'invalid_request') return 'PRODEX no pudo validar la solicitud.';
   if (error.status === 'rate_limited') return 'PRODEX recibió muchas solicitudes. Intenta de nuevo en un momento.';
@@ -64,7 +67,8 @@ function friendlyPreflightError(error: PreflightError) {
   return saleSubmissionMessage(error.code);
 }
 
-export default function CheckoutScreen() {
+function CheckoutScreenContent() {
+  const { invalidate: invalidateRegister } = useCashRegister();
   const { height: windowHeight } = useWindowDimensions();
   const cart = usePosCart();
   const { session, signOut } = useAuth();
@@ -263,6 +267,7 @@ export default function CheckoutScreen() {
         await signOut();
         return;
       }
+      if (error instanceof MobilePosCheckoutError && error.code === 'cash_register_not_open') invalidateRegister();
       setPreflightError(error instanceof MobilePosCheckoutError ? checkoutErrorMessage(error) : 'No pudimos revisar la venta.');
       setPreflightErrorKey(requestedKey);
     } finally {
@@ -305,7 +310,10 @@ export default function CheckoutScreen() {
     if (!session?.accessToken || !preflightIntent || validationMessage || !currency) return;
     await cart.saleSubmission.start({ intent: preflightIntent, currentKey: currentPreflightKey, validatedKey: preflightKey, canSubmit: activePreflight?.can_submit === true, currency, token: session.accessToken });
     if (cart.saleSubmission.getSnapshot().status === 'session_expired') await signOut();
-    if (cart.saleSubmission.getSnapshot().status === 'business_error') { setPreflight(null); setPreflightKey(''); }
+    if (cart.saleSubmission.getSnapshot().status === 'business_error') {
+      if (cart.saleSubmission.getSnapshot().error?.code === 'cash_register_not_open') invalidateRegister();
+      setPreflight(null); setPreflightKey('');
+    }
   };
   const retrySale = async () => {
     if (!session?.accessToken) return;
@@ -373,6 +381,7 @@ export default function CheckoutScreen() {
 
           {cart.submission.status === 'business_error' && cart.submission.error && <Text accessibilityRole="alert" style={styles.error}>{cart.submission.error.message}</Text>}
           {validationMessage && <FadeInView><Text style={styles.error}>{validationMessage}</Text></FadeInView>}
+          {(activePreflightError === 'Necesitas abrir caja antes de registrar una venta.' || cart.submission.error?.code === 'cash_register_not_open') && <PressableScale accessibilityRole="button" onPress={() => router.push('/cash-register/open')}><Text>Abrir caja</Text></PressableScale>}
           {activePreflightError && <FadeInView style={styles.preflightErrors}>{activePreflightError.split('\n').map((line) => <Text key={line} style={styles.error}>{line}</Text>)}</FadeInView>}
           <FadeInView style={[styles.preflightStatus, preflightStatus === 'validated' && styles.validated]} distance={4} duration={motion.duration.fast}>
             {preflightStatus === 'loading' ? <ActivityIndicator size="small" color={colors.brand} /> : <Ionicons name={preflightStatus === 'validated' ? 'checkmark-circle' : preflightStatus === 'error' ? 'alert-circle-outline' : 'shield-checkmark-outline'} size={20} color={preflightStatus === 'validated' ? colors.brand : colors.inkMuted} />}
@@ -451,3 +460,8 @@ const styles = StyleSheet.create({
   clientName: { color: colors.ink, fontSize: 13, fontWeight: fontWeights.bold },
   clientMeta: { marginTop: spacing.xs, color: colors.inkMuted, fontSize: 12 },
 });
+
+export default function CheckoutScreen() {
+  const { submission } = usePosCart();
+  return <PosRegisterGuard recovery={['loading', 'submitting', 'uncertain', 'session_expired', 'success'].includes(submission.status)}><CheckoutScreenContent /></PosRegisterGuard>;
+}

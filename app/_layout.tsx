@@ -2,6 +2,7 @@ import { Stack, router, usePathname, useRootNavigationState } from 'expo-router'
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { CashRegisterProvider } from '../src/context/CashRegisterContext';
 import { PosCartProvider } from '../src/context/PosCartContext';
 import { AuthLoading } from '../src/components/auth/AuthLoading';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
@@ -35,10 +36,12 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
+        <CashRegisterProvider>
         <PosCartProvider>
           <StatusBar style="dark" />
           <AuthGate />
         </PosCartProvider>
+        </CashRegisterProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

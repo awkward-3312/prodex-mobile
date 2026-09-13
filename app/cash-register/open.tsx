@@ -1,3 +1,4 @@
+import { useCashRegister } from '../../src/context/CashRegisterContext';
 import { Ionicons } from '@expo/vector-icons';
 import { randomUUID } from 'expo-crypto';
 import { router } from 'expo-router';
@@ -18,6 +19,7 @@ import { colors, fontWeights, radii, sizing, spacing, surfaces, typography } fro
 type Step = 'form' | 'confirm';
 
 export default function OpenCashRegisterScreen() {
+  const { refresh, invalidate } = useCashRegister();
   const { session, signOut, user } = useAuth();
   const owner = session && user ? `${session.baseUrl.replace(/\/$/, '')}|${String(user.id ?? user.email)}` : '';
   const [step, setStep] = useState<Step>('form');
@@ -49,9 +51,11 @@ export default function OpenCashRegisterScreen() {
 
   useEffect(() => {
     if (state.status === 'success') {
+      invalidate();
+      void refresh();
       void controller.finish().then(() => router.replace('/cash-register'));
     }
-  }, [state.status, controller]);
+  }, [state.status, controller, refresh, invalidate]);
 
   const handleContinue = () => {
     setFormError(null);

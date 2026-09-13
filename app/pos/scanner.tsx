@@ -1,3 +1,4 @@
+import { PosRegisterGuard } from '../../src/components/pos/PosRegisterGuard';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import type { BarcodeType } from 'expo-camera';
@@ -15,7 +16,7 @@ import { resolveScannedProduct } from '../../src/services/pos/productBarcodeServ
 
 const barcodeTypes: BarcodeType[] = ['code128', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code39'];
 
-export default function ScannerScreen() {
+function ScannerScreenContent() {
   const [permission, requestPermission] = useCameraPermissions();
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [isProcessingScan, setIsProcessingScan] = useState(false);
@@ -137,3 +138,7 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas },
   loadingText: { color: colors.inkMuted, fontSize: 13 },
 });
+
+export default function ScannerScreen() {
+  return <PosRegisterGuard><ScannerScreenContent /></PosRegisterGuard>;
+}

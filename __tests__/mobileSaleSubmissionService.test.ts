@@ -40,7 +40,7 @@ it.each([
   [422, 'insufficient_stock', 'business_error'], [422, 'validation_error', 'business_error'],
   [422, 'fiscal_error', 'business_error'], [422, 'invalid_account', 'business_error'],
   [403, 'forbidden', 'business_error'], [401, 'unauthenticated', 'session_expired'],
-  [409, 'conflict', 'uncertain'], [500, 'server_error', 'uncertain'], [429, 'rate_limited', 'uncertain'],
+  [409, 'cash_register_not_open', 'business_error'], [409, 'conflict', 'uncertain'], [500, 'server_error', 'uncertain'], [429, 'rate_limited', 'uncertain'],
 ])('maps HTTP %s %s without exposing raw Laravel messages', async (status, code, kind) => {
   jest.spyOn(globalThis, 'fetch').mockResolvedValue(response({ error: { code, message: 'SQLSTATE secret raw exception' } }, Number(status)));
   await expect(submit()).rejects.toMatchObject({ kind });
@@ -69,4 +69,9 @@ it('requires UUID v4 and valid exact-decimal amounts', () => {
   expect(UUID_V4.test('223e4567-e89b-42d3-a456-426614174000')).toBe(true);
   expect(() => buildSaleSubmissionRequest('invalid', intent)).toThrow(SaleSubmissionError);
   expect(() => buildSaleSubmissionRequest(uuid, { ...intent, payment_intent: [{ payment_method_id: 1, amount: '10.999' }] })).toThrow(SaleSubmissionError);
+});
+
+it('register guard rejection keeps its specific opening instruction', async () => {
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(response({ error: { code: 'cash_register_not_open' } }, 409));
+  await expect(submit()).rejects.toMatchObject({ kind: 'business_error', code: 'cash_register_not_open', message: 'Necesitas abrir caja antes de registrar una venta.' });
 });

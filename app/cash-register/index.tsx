@@ -1,6 +1,7 @@
+import { useCashRegister } from '../../src/context/CashRegisterContext';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,11 +14,10 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { useAuth } from '../../src/context/AuthContext';
 import {
   getCashRegisterHistory,
-  getCurrentCashRegister,
   mobileCashRegisterMessage,
   MobileCashRegisterError,
 } from '../../src/services/cashRegister/mobileCashRegisterService';
-import type { CashRegisterCurrentResponse, CashRegisterHistoryItem, CashRegisterPaymentMethodTotal } from '../../src/services/cashRegister/mobileCashRegisterService';
+import type { CashRegisterHistoryItem, CashRegisterPaymentMethodTotal } from '../../src/services/cashRegister/mobileCashRegisterService';
 import { formatCurrency } from '../../src/utils/formatCurrency';
 import { colors, fontWeights, radii, sizing, spacing, surfaces, typography } from '../../src/theme';
 
@@ -36,39 +36,13 @@ function PaymentMethodRow({ method }: { method: CashRegisterPaymentMethodTotal }
 }
 
 function CurrentRegisterView({ canOperate }: { canOperate: boolean }) {
-  const { session, signOut } = useAuth();
-  const [data, setData] = useState<CashRegisterCurrentResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { data, status, error, refresh } = useCashRegister();
   const [movementType, setMovementType] = useState<'in' | 'out' | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  const load = useCallback((mode: 'initial' | 'refresh' = 'initial') => {
-    if (!session?.baseUrl || !session.accessToken) return;
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    if (mode === 'refresh') setRefreshing(true); else setLoading(true);
-    setErrorMessage(null);
-    getCurrentCashRegister({ baseUrl: session.baseUrl, accessToken: session.accessToken, signal: controller.signal })
-      .then((result) => setData(result))
-      .catch((error) => {
-        if (controller.signal.aborted) return;
-        if (error instanceof MobileCashRegisterError && error.status === 'session_expired') {
-          void signOut();
-          return;
-        }
-        setErrorMessage(error instanceof MobileCashRegisterError ? mobileCashRegisterMessage(error.status) : 'No pudimos cargar la caja.');
-      })
-      .finally(() => { if (!controller.signal.aborted) { setLoading(false); setRefreshing(false); } });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.baseUrl, session?.accessToken]);
-
-  useEffect(() => {
-    load('initial');
-    return () => abortRef.current?.abort();
-  }, [load]);
+  const loading = status === 'loading' && !data;
+  const refreshing = status === 'loading' && !!data;
+  const errorMessage = error ? 'No pudimos cargar la caja.' : null;
+  const load = (_mode?: string) => { void refresh(); };
+  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator color={colors.brand} /></View>;
@@ -90,6 +64,7 @@ function CurrentRegisterView({ canOperate }: { canOperate: boolean }) {
             <View style={styles.statusDot} />
             <Text style={styles.statusText}>Caja abierta</Text>
           </View>
+          {canOperate ? <PressableScale accessibilityRole="button" accessibilityLabel="Cerrar caja" style={[styles.movementButton, styles.movementOut, { marginTop: spacing.md }]} onPress={() => router.push('/cash-register/close')}><Ionicons name="lock-closed-outline" size={18} color={colors.amber} /><Text style={[styles.movementButtonText, { color: colors.amber }]}>Cerrar caja</Text></PressableScale> : null}
           <Text style={styles.locationLabel}>{[data.register.branch?.name, data.register.cashDrawer?.name ?? data.register.inventoryLocation?.name].filter(Boolean).join(' · ') || 'Sin ubicación asignada'}</Text>
           <Text style={styles.openedAt}>Abierta desde {data.register.openedAt}</Text>
 
@@ -179,6 +154,7 @@ function HistoryView() {
 
     getCashRegisterHistory({ baseUrl: session.baseUrl, accessToken: session.accessToken, page: targetPage, perPage: HISTORY_PER_PAGE, signal: controller.signal })
       .then((result) => {
+        if (controller.signal.aborted) return;
         setPage(result.pagination.page);
         setHasMore(result.pagination.has_more);
         setItems((current) => (mode === 'append' ? [...current, ...result.items] : result.items));
@@ -202,10 +178,10 @@ function HistoryView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.baseUrl, session?.accessToken]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     load(1, 'replace');
     return () => abortRef.current?.abort();
-  }, [load]);
+  }, [load]));
 
   const handleEndReached = () => {
     if (loadingInitial || loadingMore || loadingMoreRef.current || refreshing || !hasMore) return;

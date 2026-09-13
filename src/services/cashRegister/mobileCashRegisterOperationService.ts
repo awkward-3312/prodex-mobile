@@ -29,6 +29,8 @@ export class CashRegisterOperationError extends Error {
 
 export function cashRegisterOperationMessage(code: string): string {
   const messages: Record<string, string> = {
+    cash_register_not_open: 'Necesitas abrir caja antes de registrar una venta.',
+    register_already_closed: 'Esta caja ya está cerrada.',
     register_already_open: 'Ya tienes una caja abierta.',
     register_closed: 'Esta caja ya está cerrada.',
     register_not_found: 'No encontramos esa caja.',
@@ -80,8 +82,9 @@ export function parseCashRegisterOperationResponse(payload: unknown, expectedUui
   };
 }
 
-function mapApiError(error: ApiError): CashRegisterOperationError {
+export function mapApiError(error: ApiError): CashRegisterOperationError {
   if (error.status === 401 || error.code === 'token_idle_timeout') return new CashRegisterOperationError('session_expired', 'session_expired');
+  if (error.status === 404) return new CashRegisterOperationError('business_error', error.code ?? 'register_not_found');
   if (error.status === 403) return new CashRegisterOperationError('business_error', error.code ?? 'forbidden');
   if (error.status === 422) return new CashRegisterOperationError('business_error', error.code ?? 'validation_error');
   if (error.status === 409) {

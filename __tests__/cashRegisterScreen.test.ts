@@ -12,7 +12,7 @@ jest.mock('../src/components/motion', () => {
 });
 
 const mockBack = jest.fn();
-jest.mock('expo-router', () => ({ router: { back: () => mockBack() } }));
+jest.mock('expo-router', () => ({ router: { back: () => mockBack(), push: jest.fn() }, useFocusEffect: (effect: any) => jest.requireActual('react').useEffect(effect, [effect]) }));
 
 const mockGetCurrent = jest.fn();
 const mockGetHistory = jest.fn();
@@ -32,7 +32,9 @@ jest.mock('../src/context/AuthContext', () => ({
   }),
 }));
 
-import CashRegisterScreen from '../app/cash-register/index';
+import CashRegisterContent from '../app/cash-register/index';
+import { CashRegisterProvider } from '../src/context/CashRegisterContext';
+function CashRegisterScreen() { return React.createElement(CashRegisterProvider, null, React.createElement(CashRegisterContent)); }
 import { MobileCashRegisterError } from '../src/services/cashRegister/mobileCashRegisterService';
 
 const openRegister = () => ({

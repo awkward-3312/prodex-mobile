@@ -1,3 +1,4 @@
+jest.mock('../src/context/CashRegisterContext', () => ({ useCashRegister: () => ({ status: 'open' }) }));
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { Text } from 'react-native';

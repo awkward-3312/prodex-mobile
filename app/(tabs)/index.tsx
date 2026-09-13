@@ -1,3 +1,4 @@
+import { useCashRegister } from '../../src/context/CashRegisterContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -49,6 +50,7 @@ function DeltaBadge({ pct, tone }: { pct: number | null; tone: 'onDark' | 'onLig
 }
 
 export default function DashboardScreen() {
+  const { status: registerStatus } = useCashRegister();
   const { user, tenant, operationalContext, session, signOut, hasPermission } = useAuth();
   const firstName = user?.name?.trim().split(/\s+/)[0] ?? null;
   const companyName = tenant?.company_name ? String(tenant.company_name) : 'Empresa activa';
@@ -114,7 +116,7 @@ export default function DashboardScreen() {
 
         <Text style={styles.sectionTitle}>Acciones rápidas</Text>
         <View style={styles.actionsGrid}>
-          <QuickAction label="Nueva venta" icon="add" primary onPress={() => router.push('/(tabs)/pos')} />
+          <QuickAction label={registerStatus === 'open' ? 'Nueva venta' : 'Abrir caja'} icon="add" primary onPress={() => router.push(registerStatus === 'open' ? '/(tabs)/pos' : '/cash-register/open')} />
           <QuickAction label="Productos" icon="pricetag-outline" onPress={() => router.push('/(tabs)/inventory')} />
           <QuickAction label="Inventario" icon="cube-outline" onPress={() => router.push('/(tabs)/inventory')} />
           {canViewClients ? <QuickAction label="Clientes" icon="people-outline" onPress={() => router.push('/clients')} /> : null}
