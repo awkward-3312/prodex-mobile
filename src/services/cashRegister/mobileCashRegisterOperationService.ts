@@ -36,6 +36,7 @@ export function cashRegisterOperationMessage(code: string): string {
     register_not_found: 'No encontramos esa caja.',
     forbidden: 'No puedes operar esta caja.',
     idempotency_conflict: 'Esta operación ya fue enviada con datos diferentes. Revisa antes de continuar.',
+    denomination_total_mismatch: 'El desglose por denominaciones debe coincidir con el efectivo contado.',
     validation_error: 'Revisa los datos ingresados.',
     session_expired: 'Tu sesión expiró. Inicia sesión nuevamente.',
     storage_error: 'No pudimos guardar la operación en este dispositivo. Reintenta antes de continuar.',

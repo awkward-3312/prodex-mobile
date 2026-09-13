@@ -1,8 +1,8 @@
 import { CashRegisterOperationController } from '../src/services/cashRegister/cashRegisterOperationController';
 import { CashRegisterOperationError } from '../src/services/cashRegister/mobileCashRegisterOperationService';
-import { centsMoney, denominationTotal, moneyCents, validCloseRequest, validCloseResponse, parseCloseResponse, type CashRegisterCloseRequest, type CashRegisterCloseResponse } from '../src/services/cashRegister/mobileCashRegisterCloseService';
+import { centsMoney, denominationTotal, moneyCents, reconcileDenominations, validCloseRequest, validCloseResponse, parseCloseResponse, type CashRegisterCloseRequest, type CashRegisterCloseResponse } from '../src/services/cashRegister/mobileCashRegisterCloseService';
 
-const request: CashRegisterCloseRequest = { operation_uuid: '123e4567-e89b-42d3-a456-426614174000', register_id: 6, counted_cash: '1020.00', counted_denominations: { '500': 2, '20': 1 }, notes: 'Revisado' };
+const request: CashRegisterCloseRequest = { operation_uuid: '123e4567-e89b-42d3-a456-426614174000', register_id: 6, counted_cash: '1020.00', counted_denominations: { '500': 2, '200': 0, '100': 0, '50': 0, '20': 1, '10': 0, '5': 0, '2': 0, '1': 0, '0.50': 0, '0.20': 0, '0.10': 0, '0.05': 0 }, notes: 'Revisado' };
 const response: CashRegisterCloseResponse = { success: true, idempotent: false, operationUuid: request.operation_uuid, operationType: 'close', registerId: 6, closedAt: '2026-09-13T12:00:00Z', expectedCash: '1020.00', countedCash: '1020.00', difference: '0.00' };
 function fixture(raw: string | null = null) {
   let saved = raw;
@@ -107,4 +107,19 @@ it.each(['broken', JSON.stringify({ version: 1, owner: 'other', kind: 'close', r
   await f.controller.retry('token');
   expect(f.controller.isLocked()).toBe(true);
   expect(f.send).not.toHaveBeenCalled();
+});
+
+it('requires declared amount and matching breakdown while checking all configured keys for review', () => {
+  const config = { currencyCode: 'HNL', bills: ['500', '20'], coins: ['0.20', '0.05'] };
+  expect(validCloseRequest({ ...request, counted_denominations: undefined })).toBe(false);
+  expect(validCloseRequest({ ...request, counted_denominations: { '500': 2 } })).toBe(false);
+  expect(reconcileDenominations('1020', { '500': 2, '20': 1 }, config).matches).toBe(false);
+  expect(reconcileDenominations('1020', { '500': 2, '20': 1, '0.20': 0, '0.05': 0 }, config).matches).toBe(true);
+  expect(reconcileDenominations('0', { '500': 0, '20': 0, '0.20': 0, '0.05': 0, '3': 0 }, config).matches).toBe(false);
+  expect(reconcileDenominations('0.65', { '500': 0, '20': 0, '0.20': 3, '0.05': 1 }, config)).toMatchObject({ matches: true, total: '0.65', delta: 0 });
+  expect(reconcileDenominations('0', {}, undefined).matches).toBe(false);
+});
+it('denomination mismatch is a correctable business error with a clear message', () => {
+  const error = new CashRegisterOperationError('business_error', 'denomination_total_mismatch');
+  expect(error.message).toBe('El desglose por denominaciones debe coincidir con el efectivo contado.');
 });

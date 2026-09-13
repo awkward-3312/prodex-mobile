@@ -11,7 +11,7 @@ import { useCashRegister } from '../../src/context/CashRegisterContext';
 import { CashRegisterOperationController } from '../../src/services/cashRegister/cashRegisterOperationController';
 import { cashRegisterAttemptStorage } from '../../src/services/cashRegister/cashRegisterAttemptStorage';
 import { cashRegisterOperationMessage } from '../../src/services/cashRegister/mobileCashRegisterOperationService';
-import { centsMoney, closeCashRegister, CLOSE_MONEY, closeMoneyFields, denominationTotal, moneyCents, validCloseRequest, validCloseResponse, type CashRegisterCloseRequest, type CashRegisterCloseResponse } from '../../src/services/cashRegister/mobileCashRegisterCloseService';
+import { centsMoney, closeCashRegister, CLOSE_MONEY, closeMoneyFields, denominationTotal, reconcileDenominations, moneyCents, validCloseRequest, validCloseResponse, type CashRegisterCloseRequest, type CashRegisterCloseResponse } from '../../src/services/cashRegister/mobileCashRegisterCloseService';
 import { formatCurrency } from '../../src/utils/formatCurrency';
 import { colors, fontWeights, radii, sizing, spacing, surfaces } from '../../src/theme';
 
@@ -29,8 +29,8 @@ export default function CloseCashRegisterScreen() {
   const { data, status, refresh, invalidate } = useCashRegister();
   const owner = session && user ? `${session.baseUrl.replace(/\/$/, '')}|${String(user.id ?? user.email)}` : '';
   const [draft, setDraft] = useState<Draft>({ counted_cash: '' });
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [countMode, setCountMode] = useState<'direct' | 'denominations'>('direct');
+  const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>({});
+  const [breakdownConfirmed, setBreakdownConfirmed] = useState(false);
   const [confirm, setConfirm] = useState<CashRegisterCloseRequest | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const completed = useRef<CashRegisterOperationController<CashRegisterCloseRequest, CashRegisterCloseResponse> | null>(null);
@@ -55,20 +55,23 @@ export default function CloseCashRegisterScreen() {
   const register = data?.status === 'open' ? data.register : null;
   const summary = data?.status === 'open' ? data.summary : null;
   const frozen = attempt.attempt?.request ?? confirm;
-  const counted = countMode === 'denominations' ? denominationTotal(quantities) : (draft.counted_cash ?? '').replace(',', '.');
+  const counted = (draft.counted_cash ?? '').replace(',', '.');
+  const denominationKeys = summary?.denominations ? [...summary.denominations.bills, ...summary.denominations.coins] : [];
+  const quantities = Object.fromEntries(denominationKeys.map(key => [key, quantityInputs[key] === '' ? NaN : Number(quantityInputs[key] ?? '0')]));
+  const reconciliation = reconcileDenominations(counted, quantities, summary?.denominations);
+  const canReview = reconciliation.matches && breakdownConfirmed && status === 'open';
   const displayedCount = frozen?.counted_cash ?? counted;
   const difference = summary && CLOSE_MONEY.test(displayedCount) ? centsMoney(moneyCents(displayedCount) - (summary.expectedCash.startsWith('-') ? -moneyCents(summary.expectedCash.slice(1)) : moneyCents(summary.expectedCash))) : null;
   const differenceLabel = difference === null ? 'Pendiente de conteo' : difference === '0.00' ? 'Exacto' : difference.startsWith('-') ? 'Faltante' : 'Sobrante';
   const set = (field: keyof Draft, value: string | boolean) => setDraft(current => ({ ...current, [field]: value }));
   const review = () => {
-    if (!register || !summary || status !== 'open') return;
-    const payload: CashRegisterCloseRequest = { operation_uuid: randomUUID(), register_id: register.id, counted_cash: counted };
+    if (!register || !summary || !canReview) return;
+    const payload: CashRegisterCloseRequest = { operation_uuid: randomUUID(), register_id: register.id, counted_cash: counted, counted_denominations: quantities };
     for (const [field, value] of Object.entries(draft)) {
       if (typeof value === 'string' && value.trim()) Object.assign(payload, { [field]: value.trim() });
       if (typeof value === 'boolean') Object.assign(payload, { [field]: value });
     }
     payload.counted_cash = counted;
-    if (countMode === 'denominations') payload.counted_denominations = quantities;
     for (const field of closeMoneyFields) if (payload[field]) payload[field] = payload[field]!.replace(',', '.');
     if (!validCloseRequest(payload)) { setFormError('Revisa el conteo y los importes. Usa hasta dos decimales y valores de cero o mayores.'); return; }
     setFormError(null);
@@ -106,15 +109,32 @@ export default function CloseCashRegisterScreen() {
           <Line label="Cantidad de transacciones" value={String(summary.transactionCount)} />
         </View> : null}
         {confirm || recovery ? <>
-          {frozen ? <View style={styles.card}><Line label="Efectivo contado" value={money(frozen.counted_cash)} /><Text style={styles.muted}>El cierre finalizará esta sesión de caja. Verifica el conteo antes de confirmar.</Text></View> : null}
+          {frozen ? <View style={styles.card}><Line label="Efectivo contado" value={money(frozen.counted_cash)} /><Line label="Total por denominaciones" value={money(denominationTotal(frozen.counted_denominations))} /><Text style={styles.muted}>El cierre finalizará esta sesión de caja. Verifica el conteo antes de confirmar.</Text></View> : null}
         </> : <>
           <View style={styles.card}>
             <Text style={styles.section}>Conteo de efectivo</Text>
-            {summary?.denominations ? <View style={styles.line}>{(['direct', 'denominations'] as const).map(mode => <PressableScale key={mode} accessibilityRole="button" accessibilityState={{ selected: mode === countMode }} style={[styles.option, mode === countMode && styles.selected]} onPress={() => setCountMode(mode)}><Text style={styles.value}>{mode === 'direct' ? 'Monto directo' : 'Denominaciones'}</Text></PressableScale>)}</View> : null}
-            {countMode === 'direct' ? <Field label="Efectivo contado" decimal value={draft.counted_cash} onChange={value => set('counted_cash', value)} /> : <>
-              {(['bills', 'coins'] as const).map(group => <View key={group}><Text style={styles.label}>{group === 'bills' ? 'Billetes' : 'Monedas'}</Text>{summary?.denominations?.[group].map(value => <View key={value} style={styles.line}><Text style={styles.value}>{money(value)}</Text><TextInput style={[styles.input, styles.quantity]} accessibilityLabel={`Cantidad de ${value}`} keyboardType="number-pad" placeholder="0" value={quantities[value] ? String(quantities[value]) : ''} onChangeText={text => { if (/^\d{0,6}$/.test(text)) setQuantities(current => ({ ...current, [value]: Number(text) })); }} /></View>)}</View>)}
-              <Line label="Efectivo contado" value={money(counted)} />
-            </>}
+            <Field label="Monto contado" decimal value={draft.counted_cash} onChange={value => { set('counted_cash', value); setBreakdownConfirmed(false); }} />
+            <Text style={styles.section}>Desglose por denominaciones</Text>
+            {(['bills', 'coins'] as const).map(group => <View key={group}>
+              <Text style={styles.label}>{group === 'bills' ? 'Billetes' : 'Monedas'}</Text>
+              {summary?.denominations?.[group].map(value => <View key={value} style={styles.line}>
+                <Text style={styles.value}>{money(value)}</Text>
+                <TextInput style={[styles.input, styles.quantity]} accessibilityLabel={`Cantidad de ${value}`} keyboardType="number-pad" value={quantityInputs[value] ?? '0'} onChangeText={text => {
+                  if (/^\d{0,7}$/.test(text) && Number(text) <= 1000000) {
+                    setQuantityInputs(current => ({ ...current, [value]: text })); setBreakdownConfirmed(false);
+                  }
+                }} />
+              </View>)}
+            </View>)}
+            {!summary?.denominations ? <Text accessibilityRole="alert" style={styles.error}>No pudimos obtener las denominaciones. Actualiza Caja antes de continuar.</Text> : null}
+            <Line label="Total por denominaciones" value={reconciliation.total === null ? 'Completa las cantidades' : money(reconciliation.total)} />
+            <Line label="Monto declarado" value={CLOSE_MONEY.test(counted) ? money(counted) : 'Pendiente'} />
+            <Line label="Diferencia de conteo" value={reconciliation.delta === null ? 'Pendiente' : money(centsMoney(reconciliation.delta))} />
+            {reconciliation.delta !== null && reconciliation.delta !== 0 ? <View accessibilityLiveRegion="polite">
+              <Text style={styles.error}>El desglose por denominaciones debe coincidir con el efectivo contado.</Text>
+              <Text style={styles.error}>{reconciliation.delta < 0 ? 'Faltan' : 'Sobran'} {money(centsMoney(Math.abs(reconciliation.delta)))} en el desglose</Text>
+            </View> : null}
+            <View style={styles.line}><Text style={styles.muted}>Confirmo el desglose por denominaciones</Text><Switch accessibilityLabel="Confirmo el desglose por denominaciones" value={breakdownConfirmed} disabled={!reconciliation.matches} onValueChange={setBreakdownConfirmed} /></View>
           </View>
           {summary && Number(summary.cardSystemTotal) > 0 ? <View style={styles.card}>
             <Text style={styles.section}>Conciliación de tarjetas</Text><Text style={styles.muted}>Datos opcionales del terminal</Text>
@@ -133,11 +153,11 @@ export default function CloseCashRegisterScreen() {
             <Field label="Notas" value={draft.notes} onChange={v => set('notes', v)} />
           </View>
         </>}
-        {difference !== null ? <View style={[styles.card, { backgroundColor: difference === '0.00' ? colors.brandSoft : colors.amber + '12' }]}><Line label={`Diferencia · ${differenceLabel}`} value={money(difference)} /><Text style={styles.muted}>Estimación del conteo; PRODEX confirmará el resultado final.</Text></View> : null}
+        {difference !== null ? <View style={[styles.card, { backgroundColor: difference === '0.00' ? colors.brandSoft : colors.amber + '12' }]}><Line label={`Diferencia de caja · ${differenceLabel}`} value={money(difference)} /><Text style={styles.muted}>Estimación del conteo; PRODEX confirmará el resultado final.</Text></View> : null}
         {formError || attempt.error ? <Text accessibilityRole="alert" style={styles.error}>{formError ?? cashRegisterOperationMessage(attempt.error!.code)}</Text> : null}
         {uncertain ? <><Text style={styles.muted}>Hay un cierre pendiente de confirmar. Reintentar consultará la misma operación guardada.</Text><PressableScale accessibilityRole="button" style={styles.primary} onPress={retry}><Text style={styles.primaryText}>Reintentar cierre</Text></PressableScale></> :
-          attempt.status === 'business_error' ? <PressableScale accessibilityRole="button" style={styles.primary} onPress={() => { controller.reset(); setConfirm(null); void refresh(); }}><Text style={styles.primaryText}>Corregir</Text></PressableScale> :
-          <><PressableScale accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} style={[styles.primary, busy && { opacity: 0.6 }]} onPress={confirm ? submit : review}>{busy ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryText}>{confirm ? 'Cerrar caja' : 'Revisar cierre'}</Text>}</PressableScale>
+          attempt.status === 'business_error' ? <PressableScale accessibilityRole="button" style={styles.primary} onPress={() => { controller.reset(); setConfirm(null); setBreakdownConfirmed(false); void refresh(); }}><Text style={styles.primaryText}>Corregir</Text></PressableScale> :
+          <><PressableScale accessibilityRole="button" accessibilityState={{ disabled: busy || (!confirm && !canReview) }} disabled={busy || (!confirm && !canReview)} style={[styles.primary, (busy || (!confirm && !canReview)) && { opacity: 0.6 }]} onPress={confirm ? submit : review}>{busy ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryText}>{confirm ? 'Cerrar caja' : 'Revisar cierre'}</Text>}</PressableScale>
           {confirm && !busy ? <PressableScale accessibilityRole="button" style={styles.option} onPress={() => setConfirm(null)}><Text style={styles.value}>Volver al conteo</Text></PressableScale> : null}</>}
       </ScrollView>}
   </SafeAreaView>;

@@ -1,5 +1,6 @@
 import { apiClient } from '../api/apiClient';
 import { ApiError } from '../api/apiError';
+import type { CashDenominations } from './mobileCashRegisterService';
 import { isRecord } from './mobileCashRegisterService';
 import { CashRegisterOperationError, mapApiError, UUID_V4 } from './mobileCashRegisterOperationService';
 
@@ -9,7 +10,7 @@ export type CloseMoneyField = typeof closeMoneyFields[number];
 export type CashRegisterCloseRequest = {
   operation_uuid: string; register_id: string | number; counted_cash: string;
   closing_balance?: string; cash_withdrawn_at_close?: string; next_opening_float?: string;
-  counted_denominations?: Record<string, number>; card_terminal_total?: string;
+  counted_denominations: Record<string, number>; card_terminal_total?: string;
   card_batch_number?: string; card_reference?: string; card_notes?: string;
   transfers_verified?: boolean; transfer_notes?: string; notes?: string;
 };
@@ -35,6 +36,19 @@ export function denominationTotal(quantities: Record<string, number>): string {
     return sum + moneyCents(denomination) * quantity;
   }, 0));
 }
+/** UI reconciliation only; Laravel validates against its current denomination configuration. */
+export function reconcileDenominations(counted: string, quantities: Record<string, number>, configuration?: CashDenominations) {
+  const keys = configuration ? [...configuration.bills, ...configuration.coins] : [];
+  const complete = keys.length > 0 && new Set(keys).size === keys.length
+    && Object.keys(quantities).length === keys.length
+    && keys.every(key => Object.hasOwn(quantities, key));
+  try {
+    const total = denominationTotal(quantities);
+    const delta = CLOSE_MONEY.test(counted) ? moneyCents(total) - moneyCents(counted) : null;
+    return { complete, total, delta, matches: complete && delta === 0 };
+  } catch { return { complete: false, total: null, delta: null, matches: false }; }
+}
+
 export function validCloseRequest(value: unknown): value is CashRegisterCloseRequest {
   if (!isRecord(value) || typeof value.operation_uuid !== 'string' || !UUID_V4.test(value.operation_uuid)
     || !/^[1-9]\d*$/.test(String(value.register_id)) || typeof value.counted_cash !== 'string') return false;
@@ -45,9 +59,12 @@ export function validCloseRequest(value: unknown): value is CashRegisterCloseReq
     if (value[field] !== undefined && (typeof value[field] !== 'string' || value[field].length > (['card_batch_number', 'card_reference'].includes(field) ? 191 : 4000))) return false;
   }
   if (value.transfers_verified !== undefined && typeof value.transfers_verified !== 'boolean') return false;
-  if (value.counted_denominations !== undefined) {
+  {
+    if (value.counted_denominations === undefined) return false;
     if (!isRecord(value.counted_denominations) || Array.isArray(value.counted_denominations) || Object.keys(value.counted_denominations).length > 30) return false;
-    try { denominationTotal(value.counted_denominations as Record<string, number>); } catch { return false; }
+    try {
+      if (Object.keys(value.counted_denominations).length === 0 || moneyCents(denominationTotal(value.counted_denominations as Record<string, number>)) !== moneyCents(value.counted_cash)) return false;
+    } catch { return false; }
   }
   return true;
 }
