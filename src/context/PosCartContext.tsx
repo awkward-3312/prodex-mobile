@@ -4,6 +4,7 @@ import { SaleSubmissionController } from '../services/sales/saleSubmissionContro
 import type { SubmissionState } from '../services/sales/saleSubmissionController';
 import { saleAttemptStorage } from '../services/sales/saleAttemptStorage';
 import { submitMobileSale } from '../services/sales/mobileSaleSubmissionService';
+import { isOnline } from '../services/connectivity/connectivityController';
 import { createContext, useContext, useReducer, useMemo, useRef, useEffect, useState, useSyncExternalStore } from 'react';
 
 import type { CartItem, PosProduct } from '../types/pos';
@@ -96,6 +97,7 @@ export function PosCartProvider({ children }: { children: React.ReactNode }) {
       uuid: randomUUID,
       storage: owner ? saleAttemptStorage(owner) : { read: async () => null, write: async () => {}, remove: async () => {} },
       send: (request, accessToken) => submitMobileSale({ baseUrl: session?.baseUrl ?? '', accessToken, request }),
+      isOnline,
       confirmed: () => {
         carts.current.set(owner, []);
         if (ownerRef.current !== owner) return;

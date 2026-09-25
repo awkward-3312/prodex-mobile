@@ -11,6 +11,7 @@ import { CategoryChip } from '../../src/components/pos/CategoryChip';
 import { FadeInView, PressableScale } from '../../src/components/motion';
 import { AppHeader } from '../../src/components/ui/AppHeader';
 import { EmptyState } from '../../src/components/ui/EmptyState';
+import { StatHeroCard } from '../../src/components/ui/StatHeroCard';
 import { useAuth } from '../../src/context/AuthContext';
 import {
   getCashRegisterHistory,
@@ -81,10 +82,13 @@ function CurrentRegisterView({ canOperate }: { canOperate: boolean }) {
             </View>
           ) : null}
 
-          <View style={styles.heroCard}>
-            <Text style={styles.heroValue}>{money(data.summary.expectedCash)}</Text>
-            <Text style={styles.heroLabel}>Efectivo esperado</Text>
-          </View>
+          <StatHeroCard
+            variant="soft"
+            title="Efectivo esperado"
+            value={money(data.summary.expectedCash)}
+            icon="cash-outline"
+            style={styles.heroCard}
+          />
 
           <View style={styles.card}>
             <SummaryLine label="Saldo inicial" value={data.register.openingBalance} />
@@ -247,12 +251,10 @@ const styles = StyleSheet.create({
   openedAt: { marginTop: 2, color: colors.inkMuted, fontSize: 12 },
   movementRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
   movementButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: sizing.touch, borderRadius: radii.md, borderWidth: StyleSheet.hairlineWidth },
-  movementIn: { backgroundColor: `${colors.brand}0D`, borderColor: `${colors.brand}33` },
-  movementOut: { backgroundColor: `${colors.amber}0D`, borderColor: `${colors.amber}33` },
+  movementIn: { backgroundColor: colors.brandSoft, borderColor: colors.brandSoft },
+  movementOut: { backgroundColor: colors.amberSoft, borderColor: colors.amberSoft },
   movementButtonText: { fontSize: 13, fontWeight: fontWeights.bold },
-  heroCard: { ...surfaces.card, marginTop: spacing.lg, padding: spacing.xl, alignItems: 'center', backgroundColor: colors.brandSoft },
-  heroValue: { color: colors.brandDark, fontSize: 32, fontWeight: fontWeights.heavy },
-  heroLabel: { marginTop: 2, color: colors.brandDark, fontSize: 12, fontWeight: fontWeights.bold },
+  heroCard: { marginTop: spacing.lg },
   card: { ...surfaces.card, marginTop: spacing.md, padding: spacing.lg },
   sectionTitle: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold, marginBottom: spacing.sm },
   summaryLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },

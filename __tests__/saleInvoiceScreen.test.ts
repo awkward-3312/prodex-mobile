@@ -1,5 +1,29 @@
 jest.mock('../src/context/CashRegisterContext', () => ({ useCashRegister: () => ({ invalidate: jest.fn() }) }));
 jest.mock('../src/components/pos/PosRegisterGuard', () => ({ PosRegisterGuard: ({ children }: any) => children }));
+
+type MockConnectivityStatus = 'online' | 'offline' | 'reconnecting';
+let mockConnectivityStatus: MockConnectivityStatus = 'online';
+const mockConnectivityListeners = new Set<() => void>();
+jest.mock('../src/services/connectivity/connectivityController', () => {
+  const actualReact = jest.requireActual('react');
+  return {
+    isOnline: () => mockConnectivityStatus === 'online',
+    useConnectivity: () => {
+      const [, force] = actualReact.useState(0);
+      actualReact.useEffect(() => {
+        const listener = () => force((n: number) => n + 1);
+        mockConnectivityListeners.add(listener);
+        return () => mockConnectivityListeners.delete(listener);
+      }, []);
+      return { status: mockConnectivityStatus };
+    },
+  };
+});
+function setMockConnectivity(status: MockConnectivityStatus) {
+  mockConnectivityStatus = status;
+  mockConnectivityListeners.forEach((listener) => listener());
+}
+
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { Text } from 'react-native';
@@ -71,6 +95,8 @@ function renderCheckoutInvoice(onNewSale: () => void, onSales: () => void, onSes
 beforeEach(() => {
   mockGetReceipt.mockReset();
   mockWebView.mockReset();
+  mockConnectivityStatus = 'online';
+  mockConnectivityListeners.clear();
 });
 
 it('fetches the receipt with the mobile bearer session and renders it as the success screen (factura)', async () => {
@@ -135,4 +161,18 @@ it('calls onSessionExpired on a 401 instead of showing the fallback, and never f
 
   expect(onSessionExpired).toHaveBeenCalledTimes(1);
   expect(mockGetReceipt).toHaveBeenCalledTimes(1);
+});
+
+it('skips the fetch entirely while offline (the sale itself is already confirmed), then auto-retries safely once reconnected', async () => {
+  setMockConnectivity('offline');
+  mockGetReceipt.mockResolvedValue({ saleId: '5', reference: 'SL_005', html: '<html>ok</html>' });
+
+  let root!: ReturnType<typeof create>;
+  await act(async () => { root = create(renderCheckoutInvoice(jest.fn(), jest.fn())); });
+  expect(mockGetReceipt).not.toHaveBeenCalled();
+  expect(mockWebView).not.toHaveBeenCalled();
+
+  await act(async () => { setMockConnectivity('online'); await Promise.resolve(); await Promise.resolve(); });
+  expect(mockGetReceipt).toHaveBeenCalledTimes(1);
+  expect(mockWebView).toHaveBeenCalledWith(expect.objectContaining({ source: { html: '<html>ok</html>' } }));
 });

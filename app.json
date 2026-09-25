@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "prodex-mobile",
+    "name": "PRODEX Mobile",
     "slug": "prodex-mobile",
     "version": "1.0.0",
     "scheme": "prodex",
@@ -8,14 +8,16 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
+      "bundleIdentifier": "cloud.prodexhub.mobile",
+      "buildNumber": "1",
       "supportsTablet": true
     },
     "android": {
+      "package": "cloud.prodexhub.mobile",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#0F2A4A",
+        "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -31,7 +33,21 @@
           "cameraPermission": "PRODEX necesita acceso a la cámara para escanear códigos de barras de productos."
         }
       ],
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#0F2A4A"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5fb15704-786f-41df-8571-6b5a4ab3007a"
+      }
+    }
   }
 }

@@ -5,6 +5,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { CashRegisterProvider } from '../src/context/CashRegisterContext';
 import { PosCartProvider } from '../src/context/PosCartContext';
 import { AuthLoading } from '../src/components/auth/AuthLoading';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
+import { ConnectivityBanner } from '../src/components/ui/ConnectivityBanner';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { getAuthRedirect } from '../src/context/authRouting';
 import { useEffect, useRef } from 'react';
@@ -34,15 +36,18 @@ function AuthGate() {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <CashRegisterProvider>
-        <PosCartProvider>
-          <StatusBar style="dark" />
-          <AuthGate />
-        </PosCartProvider>
-        </CashRegisterProvider>
-      </AuthProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <CashRegisterProvider>
+          <PosCartProvider>
+            <StatusBar style="dark" />
+            <ConnectivityBanner />
+            <AuthGate />
+          </PosCartProvider>
+          </CashRegisterProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { PressableScale } from '../../motion';
+import { Button } from '../../ui/Button';
 import type { SaleAttempt } from '../../../types/mobileSaleSubmission';
-import { colors, fontWeights, radii, sizing, spacing, surfaces, typography } from '../../../theme';
+import { colors, fontWeights, radii, spacing, surfaces, typography } from '../../../theme';
 
 const paymentLabels = { paid: 'Pagada', partial: 'Pago parcial', unpaid: 'Pendiente de pago' };
 export function SaleConfirmation({ attempt, error, onNewSale, onSales, onRetryInvoice }: { attempt: SaleAttempt; error?: string; onNewSale: () => void; onSales: () => void; onRetryInvoice?: () => void }) {
@@ -19,9 +19,9 @@ export function SaleConfirmation({ attempt, error, onNewSale, onSales, onRetryIn
       {sale.fiscal_number ? <><Text style={styles.label}>Número fiscal</Text><Text selectable style={styles.reference}>{sale.fiscal_number}</Text></> : null}
     </View>
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-    {onRetryInvoice ? <PressableScale accessibilityRole="button" onPress={onRetryInvoice} style={styles.primary}><Text style={styles.primaryText}>Reintentar factura</Text></PressableScale> : null}
-    <PressableScale accessibilityRole="button" onPress={onNewSale} style={onRetryInvoice ? styles.secondary : styles.primary}><Text style={onRetryInvoice ? styles.secondaryText : styles.primaryText}>Nueva venta</Text></PressableScale>
-    <PressableScale accessibilityRole="button" onPress={onSales} style={styles.secondary}><Text style={styles.secondaryText}>Ver ventas</Text></PressableScale>
+    {onRetryInvoice ? <Button label="Reintentar factura" onPress={onRetryInvoice} style={styles.actionButton} /> : null}
+    <Button label="Nueva venta" variant={onRetryInvoice ? 'secondary' : 'primary'} onPress={onNewSale} style={styles.actionButton} />
+    <Button label="Ver ventas" variant="secondary" onPress={onSales} style={styles.actionButton} />
   </ScrollView></SafeAreaView>;
 }
 const styles = StyleSheet.create({
@@ -35,9 +35,6 @@ const styles = StyleSheet.create({
   reference: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.semibold, marginTop: spacing.xs },
   total: { color: colors.brandDark, fontSize: typography.display, fontWeight: fontWeights.bold, marginTop: spacing.xs },
   status: { color: colors.ink, marginTop: spacing.md },
-  primary: { minHeight: sizing.button, backgroundColor: colors.brand, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xl },
-  primaryText: { color: colors.white, fontWeight: fontWeights.bold },
-  secondary: { minHeight: sizing.button, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
-  secondaryText: { color: colors.brandDark, fontWeight: fontWeights.bold },
+  actionButton: { marginTop: spacing.md },
   error: { color: colors.red, marginTop: spacing.md },
 });

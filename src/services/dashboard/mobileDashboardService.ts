@@ -1,4 +1,4 @@
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 import { apiClient } from '../api/apiClient';
 
 export type MobileDashboardErrorStatus =
@@ -89,7 +89,7 @@ export function parseMobileDashboardSummary(payload: unknown): MobileDashboardSu
 }
 
 function mapApiError(error: ApiError): MobileDashboardError {
-  if (error.status === 401 || error.code === 'unauthenticated' || error.code === 'token_idle_timeout') {
+  if (isAuthInvalidError(error)) {
     return new MobileDashboardError('session_expired', 'Session expired');
   }
   if (error.status === 403) return new MobileDashboardError('forbidden', 'Forbidden');

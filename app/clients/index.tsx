@@ -1,11 +1,12 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ClientRow } from '../../src/components/clients/ClientRow';
-import { FadeInView, PressableScale } from '../../src/components/motion';
+import { FadeInView } from '../../src/components/motion';
 import { AppHeader } from '../../src/components/ui/AppHeader';
+import { Button } from '../../src/components/ui/Button';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { SearchField } from '../../src/components/ui/SearchField';
 import { useAuth } from '../../src/context/AuthContext';
@@ -141,7 +142,7 @@ export default function ClientsScreen() {
   const renderHeader = () => (
     <FadeInView distance={6}>
       <AppHeader title="Clientes" subtitle="Directorio del tenant" onBack={() => router.back()} />
-      {hasPermission?.('Customers_add') ? <PressableScale accessibilityRole="button" onPress={() => router.push('/clients/manage')} style={{ padding: spacing.md, backgroundColor: colors.brand }}><Text style={{ color: colors.white }}>Nuevo cliente</Text></PressableScale> : null}
+      {hasPermission?.('Customers_add') ? <Button label="Nuevo cliente" icon="person-add-outline" onPress={() => router.push('/clients/manage')} style={styles.newClientButton} /> : null}
       <SearchField
         accessibilityLabel="Buscar cliente por nombre, teléfono o RTN"
         placeholder="Buscar por nombre, teléfono o RTN"
@@ -189,6 +190,7 @@ export default function ClientsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { paddingHorizontal: spacing.lg },
+  newClientButton: { marginTop: spacing.md },
   searchBox: { marginTop: spacing.md, marginBottom: spacing.md },
   footerSpinner: { paddingVertical: spacing.lg },
   emptyState: { alignItems: 'center', paddingTop: spacing.xxl },

@@ -1,4 +1,4 @@
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 import { apiClient } from '../api/apiClient';
 import type { MobilePosCatalogItem, MobilePosCatalogResponse, MobilePosCategory, MobilePosPagination } from '../../types/mobilePosCatalog';
 import type { BarcodeSymbology, PosProduct, ProductStockStatus } from '../../types/pos';
@@ -159,7 +159,7 @@ export function parseMobilePosCatalogResponse(payload: unknown): MobilePosCatalo
 }
 
 function mapApiError(error: ApiError): MobilePosCatalogError {
-  if (error.status === 401 || error.code === 'unauthenticated' || error.code === 'token_idle_timeout') return new MobilePosCatalogError('session_expired', 'Session expired', { httpStatus: error.status, code: error.code });
+  if (isAuthInvalidError(error)) return new MobilePosCatalogError('session_expired', 'Session expired', { httpStatus: error.status, code: error.code });
   if (error.status === 403) return new MobilePosCatalogError('forbidden', 'Forbidden', { httpStatus: error.status, code: error.code });
   if (error.status === 422 || error.code === 'invalid_location') return new MobilePosCatalogError('invalid_location', 'Invalid location', { httpStatus: error.status, code: error.code });
   if (error.status === 429) return new MobilePosCatalogError('rate_limited', 'Rate limited', { httpStatus: error.status, code: error.code });

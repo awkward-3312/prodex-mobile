@@ -8,17 +8,21 @@ import { saleSubmissionMessage } from '../../src/services/sales/mobileSaleSubmis
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CashPaymentForm } from '../../src/components/pos/payment/CashPaymentForm';
 import { displayPaymentMethodName, PaymentMethodCard } from '../../src/components/pos/payment/PaymentMethodCard';
 import { PaymentSummary } from '../../src/components/pos/payment/PaymentSummary';
 import { FadeInView, PressableScale } from '../../src/components/motion';
+import { AppHeader } from '../../src/components/ui/AppHeader';
+import { BottomSheet } from '../../src/components/ui/BottomSheet';
+import { Button } from '../../src/components/ui/Button';
 import { useAuth } from '../../src/context/AuthContext';
 import { usePosCart } from '../../src/context/PosCartContext';
 import { cartItemsToPreflightLines, checkoutContextLocationLabel, fiscalSummaryFromPreflight, getCheckoutContext, MobilePosCheckoutError, needsAuthoritativeAmountRetry, paymentIntentLine, preflightSale, searchClients } from '../../src/services/pos/mobilePosCheckoutService';
-import { colors, fontWeights, motion, radii, sizing, spacing, surfaces, typography } from '../../src/theme';
+import { isOnline, useConnectivity } from '../../src/services/connectivity/connectivityController';
+import { colors, fontWeights, motion, radii, spacing, surfaces, typography } from '../../src/theme';
 import type { CheckoutAccount, CheckoutContext, CheckoutCurrency, CheckoutCustomer, CheckoutPaymentMethod, ClientSearchResult } from '../../src/types/mobilePosCheckout';
 import type { FiscalSummary, PreflightError, PreflightPaymentIntentLine, SalePreflightResponse } from '../../src/types/mobilePosSalePreflight';
 import { formatCheckoutMinorUnits, parseMinorUnits } from '../../src/utils/formatCurrency';
@@ -68,9 +72,19 @@ function friendlyPreflightError(error: PreflightError) {
   return saleSubmissionMessage(error.code);
 }
 
+/** Shared "something needs attention" line: icon + message on a tinted background, one visual language for every error/warning in this screen instead of bare colored text. */
+function AlertBox({ tone, icon, message }: { tone: 'critical' | 'warning'; icon: keyof typeof Ionicons.glyphMap; message: string }) {
+  const isCritical = tone === 'critical';
+  return (
+    <FadeInView style={[styles.alertBox, isCritical ? styles.alertCritical : styles.alertWarning]} distance={4}>
+      <Ionicons name={icon} size={18} color={isCritical ? colors.red : colors.amber} />
+      <Text style={[styles.alertText, { color: isCritical ? colors.red : colors.amber }]}>{message}</Text>
+    </FadeInView>
+  );
+}
+
 function CheckoutScreenContent() {
   const { invalidate: invalidateRegister } = useCashRegister();
-  const { height: windowHeight } = useWindowDimensions();
   const cart = usePosCart();
   const { session, signOut, hasPermission } = useAuth();
   const [creatingCustomer, setCreatingCustomer] = useState(false);
@@ -97,6 +111,8 @@ function CheckoutScreenContent() {
   const clientAbortRef = useRef<AbortController | null>(null);
   const preflightAbortRef = useRef<AbortController | null>(null);
   const preflightSeq = useRef(0);
+  const offlinePreflightErrorRef = useRef(false);
+  const connectivity = useConnectivity();
 
   const availableMethods = useMemo(() => context?.payment_methods.filter((method) => method.is_supported && method.is_available) ?? [], [context]);
   const selectedMethod = useMemo(() => availableMethods.find((method) => method.id === selection) ?? null, [availableMethods, selection]);
@@ -233,6 +249,15 @@ function CheckoutScreenContent() {
   const submitPreflight = async (totalOverrideCents?: number, isAutoCorrection = false) => {
     if (!session?.baseUrl || !session.accessToken || !selectedCustomer || validationMessage || cart.saleSubmission.isLocked()) return;
     const requestedKey = currentPreflightKey;
+    if (!isOnline()) {
+      // Avoid a request we already know will time out; the natural retry effect
+      // below re-fires once connectivity returns, no state is lost meanwhile.
+      offlinePreflightErrorRef.current = true;
+      setPreflightError('Sin conexión a internet. Conéctate para validar la venta.');
+      setPreflightErrorKey(requestedKey);
+      return;
+    }
+    offlinePreflightErrorRef.current = false;
     const seq = preflightSeq.current + 1;
     preflightSeq.current = seq;
     preflightAbortRef.current?.abort();
@@ -286,10 +311,20 @@ function CheckoutScreenContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context, contextLoading, validationMessage, currentPreflightKey, preflightKey, preflightErrorKey, preflightLoading]);
 
+  // Safe to auto-clear: nothing was sent while offline, so this only lets the
+  // debounced effect above re-attempt the same (still unvalidated) preflight.
+  useEffect(() => {
+    if (connectivity.status === 'online' && offlinePreflightErrorRef.current) {
+      offlinePreflightErrorRef.current = false;
+      setPreflightError(null);
+      setPreflightErrorKey('');
+    }
+  }, [connectivity.status]);
+
   const renderAccountSelector = (method: CheckoutPaymentMethod) => {
     if (!method.requires_account) return null;
     const accounts = accountForMethod(context?.accounts ?? [], method);
-    return <FadeInView style={styles.accountBox} distance={6}><Text style={styles.inputLabel}>Cuenta</Text>{accounts.length === 0 ? <FadeInView><Text style={styles.error}>No hay cuentas disponibles para este método.</Text></FadeInView> : <View style={styles.accountList}>{accounts.map((account) => <PressableScale key={String(account.id)} accessibilityLabel={`Cuenta ${account.name}`} accessibilityRole="radio" accessibilityState={{ selected: accountSelections[String(method.id)] === account.id }} onPress={() => updateAccount(method.id, account.id)} style={[styles.accountChip, accountSelections[String(method.id)] === account.id && styles.accountChipSelected]}><Text style={[styles.accountChipText, accountSelections[String(method.id)] === account.id && styles.accountChipTextSelected]}>{account.name}</Text></PressableScale>)}</View>}</FadeInView>;
+    return <FadeInView style={styles.accountBox} distance={6}><Text style={styles.inputLabel}>Cuenta</Text>{accounts.length === 0 ? <AlertBox tone="warning" icon="alert-circle-outline" message="No hay cuentas disponibles para este método." /> : <View style={styles.accountList}>{accounts.map((account) => <PressableScale key={String(account.id)} accessibilityLabel={`Cuenta ${account.name}`} accessibilityRole="radio" accessibilityState={{ selected: accountSelections[String(method.id)] === account.id }} onPress={() => updateAccount(method.id, account.id)} style={[styles.accountChip, accountSelections[String(method.id)] === account.id && styles.accountChipSelected]}><Text style={[styles.accountChipText, accountSelections[String(method.id)] === account.id && styles.accountChipTextSelected]}>{account.name}</Text></PressableScale>)}</View>}</FadeInView>;
   };
 
   const renderSinglePaymentForm = () => {
@@ -344,14 +379,14 @@ function CheckoutScreenContent() {
       {busy ? <ActivityIndicator size="large" color={colors.brand} /> : <Ionicons name="cloud-offline-outline" size={38} color={colors.amber} />}
       <Text accessibilityRole="header" style={styles.emptyTitle}>{busy ? 'Confirmando venta' : 'Confirmación pendiente'}</Text>
       <Text accessibilityLiveRegion="polite" style={styles.emptyText}>{busy ? 'Espera mientras comprobamos la confirmación.' : 'No pudimos confirmar la respuesta. Puedes reintentar de forma segura. Conservamos los datos de esta venta.'}</Text>
-      {cart.submission.error && cart.submission.error.message !== saleSubmissionMessage('network_error') ? <Text accessibilityRole="alert" style={styles.error}>{cart.submission.error.message}</Text> : null}
-      {!busy && <PressableScale accessibilityRole="button" onPress={retrySale} style={styles.primary}><Text style={styles.primaryText}>Reintentar confirmación</Text></PressableScale>}
-      <PressableScale accessibilityRole="button" onPress={() => router.replace('/(tabs)/pos')} style={styles.close}><Text style={styles.change}>Volver</Text></PressableScale>
+      {cart.submission.error && cart.submission.error.message !== saleSubmissionMessage('network_error') ? <AlertBox tone="critical" icon="alert-circle-outline" message={cart.submission.error.message} /> : null}
+      {!busy && <Button label="Reintentar confirmación" onPress={retrySale} style={styles.emptyButton} />}
+      <Button label="Volver" variant="secondary" onPress={() => router.replace('/(tabs)/pos')} style={styles.emptyButton} />
     </ScrollView></SafeAreaView>;
   }
 
   if (cart.items.length === 0) {
-    return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><FadeInView style={styles.empty}><Ionicons name="cart-outline" size={42} color={colors.inkMuted} /><Text style={styles.emptyTitle}>No hay una venta activa</Text><Text style={styles.emptyText}>Agrega productos desde el POS para comenzar.</Text><PressableScale accessibilityLabel="Volver al POS" accessibilityRole="button" onPress={() => router.replace('/(tabs)/pos')} style={styles.primary}><Text style={styles.primaryText}>Volver al POS</Text></PressableScale></FadeInView></SafeAreaView>;
+    return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><FadeInView style={styles.empty}><Ionicons name="cart-outline" size={42} color={colors.inkMuted} /><Text style={styles.emptyTitle}>No hay una venta activa</Text><Text style={styles.emptyText}>Agrega productos desde el POS para comenzar.</Text><Button label="Volver al POS" accessibilityLabel="Volver al POS" onPress={() => router.replace('/(tabs)/pos')} style={styles.emptyButton} /></FadeInView></SafeAreaView>;
   }
 
   const canConfirm = activePreflight?.can_submit === true;
@@ -359,38 +394,50 @@ function CheckoutScreenContent() {
   const ctaLabel = canConfirm ? 'Confirmar venta' : ctaBusy ? 'Calculando...' : activePreflightError ? 'Reintentar validación' : 'Revisar venta';
   const ctaDisabled = !!validationMessage || ctaBusy || (!canConfirm && !activePreflightError);
   const ctaAction = () => { if (canConfirm) void confirmSale(); else if (activePreflightError) void submitPreflight(); };
+  const needsRegisterOpen = activePreflightError === 'Necesitas abrir caja antes de registrar una venta.' || cart.submission.error?.code === 'cash_register_not_open';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <FadeInView style={styles.header} distance={6}>
-            <PressableScale accessibilityLabel="Volver al POS" accessibilityRole="button" onPress={() => router.back()} style={styles.back}><Ionicons name="arrow-back" size={21} color={colors.ink} /></PressableScale>
-            <View style={styles.headerCopy}><Text style={styles.title}>Cobrar</Text><Text style={styles.location}>{checkoutContextLocationLabel(context)}</Text></View>
+          <FadeInView distance={6}>
+            <AppHeader title="Cobrar" subtitle={checkoutContextLocationLabel(context)} onBack={() => router.back()} />
           </FadeInView>
 
           {contextLoading && <FadeInView style={styles.stateBox}><ActivityIndicator color={colors.brand} /><Text style={styles.stateText}>Cargando contexto de checkout...</Text></FadeInView>}
-          {contextError && <FadeInView style={styles.stateBox}><Text style={styles.error}>{contextError}</Text><PressableScale accessibilityLabel="Reintentar checkout" accessibilityRole="button" onPress={loadContext} style={styles.retry}><Text style={styles.retryText}>Reintentar</Text></PressableScale></FadeInView>}
+          {contextError && <FadeInView style={styles.stateBox}><AlertBox tone="critical" icon="cloud-offline-outline" message={contextError} /><Button label="Reintentar" onPress={loadContext} style={styles.retryButton} /></FadeInView>}
 
           <FadeInView delay={30} distance={6}><PaymentSummary itemCount={cart.itemCount} subtotalCents={fiscalSummary?.subtotalCents ?? cart.subtotalCents} discountCents={fiscalSummary?.discountCents ?? cart.discountCents} taxCents={fiscalSummary?.taxCents ?? 0} totalCents={fiscalSummary?.totalCents ?? cart.totalCents} authoritative={!!fiscalSummary} loading={!fiscalSummary && (preflightLoading || preflightPending)} currency={currency} /></FadeInView>
 
           <Text style={styles.sectionTitle}>Cliente</Text>
-          <FadeInView delay={55} distance={6} style={styles.customer}><View style={styles.customerCopy}><Text style={styles.customerLabel}>Cliente actual</Text><Text style={styles.customerName}>{selectedCustomer?.name ?? 'Selecciona un cliente'}</Text>{selectedCustomer?.rtn ? <Text style={styles.customerMeta}>RTN {selectedCustomer.rtn}</Text> : null}</View><PressableScale accessibilityLabel="Cambiar cliente" accessibilityRole="button" onPress={() => setClientModalVisible(true)} style={styles.changeButton}><Text style={styles.change}>Cambiar</Text></PressableScale></FadeInView>
+          <FadeInView delay={55} distance={6} style={styles.customer}>
+            <View style={styles.customerIconBadge}><Ionicons name="person-outline" size={18} color={colors.brand} /></View>
+            <View style={styles.customerCopy}><Text style={styles.customerLabel}>Cliente actual</Text><Text style={styles.customerName} numberOfLines={1}>{selectedCustomer?.name ?? 'Selecciona un cliente'}</Text>{selectedCustomer?.rtn ? <Text style={styles.customerMeta}>RTN {selectedCustomer.rtn}</Text> : null}</View>
+            <PressableScale accessibilityLabel="Cambiar cliente" accessibilityRole="button" onPress={() => setClientModalVisible(true)} style={styles.changeButton}><Text style={styles.change}>Cambiar</Text></PressableScale>
+          </FadeInView>
 
           <Text style={styles.sectionTitle}>Método de pago</Text>
           <View style={styles.methods}>{availableMethods.map((option) => <PaymentMethodCard key={String(option.id)} method={option} selected={selection === option.id} onPress={() => setSelection(option.id)} />)}{context?.capabilities.mixed_payments && <PaymentMethodCard method={{ id: 'mixed', name: 'Pago mixto', type: 'mixed', is_cash: false, is_card: false }} selected={selection === 'mixed'} onPress={() => setSelection('mixed')} />}</View>
           {selection === 'mixed' ? renderMixedPaymentForm() : renderSinglePaymentForm()}
 
-          {cart.submission.status === 'business_error' && cart.submission.error && <Text accessibilityRole="alert" style={styles.error}>{cart.submission.error.message}</Text>}
-          {validationMessage && <FadeInView><Text style={styles.error}>{validationMessage}</Text></FadeInView>}
-          {(activePreflightError === 'Necesitas abrir caja antes de registrar una venta.' || cart.submission.error?.code === 'cash_register_not_open') && <PressableScale accessibilityRole="button" onPress={() => router.push('/cash-register/open')}><Text>Abrir caja</Text></PressableScale>}
-          {activePreflightError && <FadeInView style={styles.preflightErrors}>{activePreflightError.split('\n').map((line) => <Text key={line} style={styles.error}>{line}</Text>)}</FadeInView>}
-          <FadeInView style={[styles.preflightStatus, preflightStatus === 'validated' && styles.validated]} distance={4} duration={motion.duration.fast}>
-            {preflightStatus === 'loading' ? <ActivityIndicator size="small" color={colors.brand} /> : <Ionicons name={preflightStatus === 'validated' ? 'checkmark-circle' : preflightStatus === 'error' ? 'alert-circle-outline' : 'shield-checkmark-outline'} size={20} color={preflightStatus === 'validated' ? colors.brand : colors.inkMuted} />}
-            <Text style={[styles.preflightStatusText, preflightStatus === 'validated' && styles.validatedText]}>{preflightStatus === 'validated' ? 'Venta validada por PRODEX. Aún no se ha confirmado el cobro.' : preflightStatus === 'loading' ? 'Calculando impuesto con PRODEX...' : preflightStatus === 'error' ? 'No pudimos validar la venta.' : 'Pendiente de validación fiscal.'}</Text>
+          {cart.submission.status === 'business_error' && cart.submission.error && <AlertBox tone="critical" icon="alert-circle-outline" message={cart.submission.error.message} />}
+          {validationMessage && <AlertBox tone="warning" icon="information-circle-outline" message={validationMessage} />}
+          {needsRegisterOpen && (
+            <FadeInView style={[styles.alertBox, styles.alertWarning, styles.registerNotice]} distance={4}>
+              <Ionicons name="lock-closed-outline" size={18} color={colors.amber} />
+              <View style={styles.registerNoticeCopy}>
+                <Text style={[styles.alertText, { color: colors.amber }]}>Necesitas abrir caja antes de registrar esta venta.</Text>
+                <Button label="Abrir caja" icon="lock-open-outline" onPress={() => router.push('/cash-register/open')} style={styles.registerNoticeButton} />
+              </View>
+            </FadeInView>
+          )}
+          {activePreflightError && <View style={styles.preflightErrors}>{activePreflightError.split('\n').map((line) => <Text key={line} style={styles.preflightErrorLine}>{line}</Text>)}</View>}
+          <FadeInView style={[styles.preflightStatus, preflightStatus === 'validated' && styles.validated, preflightStatus === 'error' && styles.errored]} distance={4} duration={motion.duration.fast}>
+            {preflightStatus === 'loading' ? <ActivityIndicator size="small" color={colors.brand} /> : <Ionicons name={preflightStatus === 'validated' ? 'checkmark-circle' : preflightStatus === 'error' ? 'alert-circle-outline' : 'shield-checkmark-outline'} size={20} color={preflightStatus === 'validated' ? colors.accent : preflightStatus === 'error' ? colors.red : colors.inkMuted} />}
+            <Text style={[styles.preflightStatusText, preflightStatus === 'validated' && styles.validatedText, preflightStatus === 'error' && styles.erroredText]}>{preflightStatus === 'validated' ? 'Venta validada por PRODEX. Aún no se ha confirmado el cobro.' : preflightStatus === 'loading' ? 'Calculando impuesto con PRODEX...' : preflightStatus === 'error' ? 'No pudimos validar la venta.' : 'Pendiente de validación fiscal.'}</Text>
           </FadeInView>
 
-          <PressableScale accessibilityLabel={ctaLabel} accessibilityRole="button" accessibilityState={{ disabled: ctaDisabled }} disabled={ctaDisabled} onPress={ctaAction} scaleTo={motion.pressScalePrimary} style={[styles.confirm, ctaDisabled && styles.disabled]}><View style={styles.confirmContent}>{preflightStatus === 'loading' ? <ActivityIndicator size="small" color={colors.white} /> : null}<Text style={styles.confirmText}>{ctaLabel}</Text></View></PressableScale>
+          <Button label={ctaLabel} accessibilityLabel={ctaLabel} disabled={ctaDisabled} loading={ctaBusy} onPress={ctaAction} style={styles.confirmButton} />
         </ScrollView>
       </KeyboardAvoidingView>
       <Modal visible={creatingCustomer} animationType="slide" onRequestClose={() => setCreatingCustomer(false)}>
@@ -399,9 +446,25 @@ function CheckoutScreenContent() {
           setCreatingCustomer(false);
         }} /> : null}</SafeAreaView>
       </Modal>
-      <Modal visible={clientModalVisible} transparent animationType="fade" onRequestClose={() => setClientModalVisible(false)}>
-        <View style={styles.overlay}><Pressable accessibilityLabel="Cerrar búsqueda de clientes" accessibilityRole="button" onPress={() => setClientModalVisible(false)} style={styles.backdrop} /><FadeInView distance={18} duration={motion.duration.slow} style={[styles.clientSheetWrap, { maxHeight: windowHeight * 0.82 }]}><SafeAreaView edges={[]} style={styles.clientSheet}><View style={styles.handle} /><View style={styles.modalHeader}><Text style={styles.modalTitle}>Seleccionar cliente</Text><PressableScale accessibilityLabel="Cerrar" accessibilityRole="button" onPress={() => setClientModalVisible(false)} style={styles.close}><Ionicons name="close" size={20} color={colors.ink} /></PressableScale></View>{hasPermission?.('Customers_add') ? <PressableScale accessibilityRole="button" onPress={() => { setClientModalVisible(false); setCreatingCustomer(true); }} style={styles.primary}><Text style={styles.primaryText}>Nuevo cliente</Text></PressableScale> : null}<TextInput accessibilityLabel="Buscar cliente" value={clientSearch} onChangeText={setClientSearch} placeholder="Nombre, teléfono o RTN" placeholderTextColor={colors.inkMuted} style={styles.input} />{clientLoading && <FadeInView><ActivityIndicator color={colors.brand} style={styles.modalSpinner} /></FadeInView>}{clientError && <FadeInView><Text style={styles.error}>{clientError}</Text></FadeInView>}<FlatList data={clientResults} keyExtractor={(item) => String(item.id)} keyboardShouldPersistTaps="handled" ListEmptyComponent={!clientLoading ? <FadeInView><Text style={styles.emptyText}>No encontramos clientes.</Text></FadeInView> : null} renderItem={({ item }) => <PressableScale accessibilityLabel={`Seleccionar ${item.name}`} accessibilityRole="button" onPress={() => { setSelectedCustomer(item); setClientModalVisible(false); }} style={styles.clientRow}><View><Text style={styles.clientName}>{item.name}</Text><Text style={styles.clientMeta}>{[item.phone, item.rtn ? `RTN ${item.rtn}` : null].filter(Boolean).join(' · ') || 'Sin datos adicionales'}</Text></View><Ionicons name="chevron-forward" size={18} color={colors.inkMuted} /></PressableScale>} /></SafeAreaView></FadeInView></View>
-      </Modal>
+      <BottomSheet visible={clientModalVisible} onClose={() => setClientModalVisible(false)} maxHeightPct={0.82} showCloseButton closeAccessibilityLabel="Cerrar búsqueda de clientes">
+        <Text style={styles.modalTitle}>Seleccionar cliente</Text>
+        {hasPermission?.('Customers_add') ? <Button label="Nuevo cliente" icon="person-add-outline" onPress={() => { setClientModalVisible(false); setCreatingCustomer(true); }} style={styles.newClientButton} /> : null}
+        <TextInput accessibilityLabel="Buscar cliente" value={clientSearch} onChangeText={setClientSearch} placeholder="Nombre, teléfono o RTN" placeholderTextColor={colors.inkMuted} style={styles.input} />
+        {clientLoading && <FadeInView><ActivityIndicator color={colors.brand} style={styles.modalSpinner} /></FadeInView>}
+        {clientError && <AlertBox tone="critical" icon="alert-circle-outline" message={clientError} />}
+        <FlatList
+          data={clientResults}
+          keyExtractor={(item) => String(item.id)}
+          keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={!clientLoading ? <FadeInView><Text style={styles.emptyText}>No encontramos clientes.</Text></FadeInView> : null}
+          renderItem={({ item }) => (
+            <PressableScale accessibilityLabel={`Seleccionar ${item.name}`} accessibilityRole="button" onPress={() => { setSelectedCustomer(item); setClientModalVisible(false); }} style={styles.clientRow}>
+              <View style={styles.clientRowCopy}><Text style={styles.clientName} numberOfLines={1}>{item.name}</Text><Text style={styles.clientMeta} numberOfLines={1}>{[item.phone, item.rtn ? `RTN ${item.rtn}` : null].filter(Boolean).join(' · ') || 'Sin datos adicionales'}</Text></View>
+              <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+            </PressableScale>
+          )}
+        />
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -410,15 +473,11 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   flex: { flex: 1 },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
-  header: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm },
-  back: { width: 44, height: 44, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
-  headerCopy: { flex: 1, marginLeft: spacing.md },
-  title: { color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold },
-  location: { marginTop: spacing.xs, color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.medium },
   sectionTitle: { marginTop: spacing.xl, marginBottom: spacing.sm, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
   stateBox: { ...surfaces.card, alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md, padding: spacing.md },
   stateText: { color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.bold },
-  customer: { ...surfaces.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg },
+  customer: { ...surfaces.card, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg },
+  customerIconBadge: { width: 40, height: 40, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
   customerCopy: { flex: 1, minWidth: 0 },
   customerLabel: { color: colors.inkMuted, fontSize: 12 },
   customerName: { marginTop: spacing.xs, color: colors.ink, fontSize: 14, fontWeight: fontWeights.bold },
@@ -438,33 +497,32 @@ const styles = StyleSheet.create({
   accountChipSelected: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
   accountChipText: { color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.semibold },
   accountChipTextSelected: { color: colors.brandDark },
-  confirm: { minHeight: sizing.button, marginTop: spacing.lg, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  confirmContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  confirmText: { color: colors.white, fontSize: 14, fontWeight: fontWeights.semibold },
-  disabled: { opacity: 0.45 },
-  error: { marginTop: spacing.sm, color: colors.red, fontSize: 12, fontWeight: fontWeights.bold, lineHeight: 17 },
+  confirmButton: { marginTop: spacing.lg },
+  retryButton: { marginTop: spacing.sm },
+  alertBox: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md },
+  alertCritical: { backgroundColor: colors.redSoft },
+  alertWarning: { backgroundColor: colors.amberSoft },
+  alertText: { flex: 1, fontSize: 12, fontWeight: fontWeights.bold, lineHeight: 17 },
+  registerNotice: { alignItems: 'center' },
+  registerNoticeCopy: { flex: 1, gap: spacing.sm },
+  registerNoticeButton: { alignSelf: 'flex-start' },
   preflightErrors: { marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.redSoft },
+  preflightErrorLine: { color: colors.red, fontSize: 12, fontWeight: fontWeights.bold, lineHeight: 17 },
   preflightStatus: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   preflightStatusText: { flex: 1, color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.bold, lineHeight: 17 },
   validated: { backgroundColor: colors.brandSoft, borderColor: colors.brandSoft },
   validatedText: { color: colors.ink },
-  retry: { minHeight: 42, paddingHorizontal: spacing.lg, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  retryText: { color: colors.white, fontSize: 12, fontWeight: fontWeights.semibold },
+  errored: { backgroundColor: colors.redSoft, borderColor: colors.redSoft },
+  erroredText: { color: colors.red },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
   emptyTitle: { marginTop: spacing.lg, color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold },
   emptyText: { marginTop: spacing.sm, color: colors.inkMuted, fontSize: 13, textAlign: 'center' },
-  primary: { minHeight: sizing.button, width: '100%', marginTop: spacing.xl, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  primaryText: { color: colors.white, fontSize: 14, fontWeight: fontWeights.bold },
-  overlay: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(23, 50, 77, 0.38)' },
-  clientSheetWrap: { width: '100%' },
-  clientSheet: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.lg, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg, backgroundColor: colors.surface },
-  handle: { alignSelf: 'center', width: 38, height: 4, marginBottom: spacing.md, borderRadius: radii.pill, backgroundColor: colors.line },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  modalTitle: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
-  close: { width: 42, height: 42, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas },
+  emptyButton: { width: '100%', marginTop: spacing.md },
+  modalTitle: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold, marginBottom: spacing.md },
+  newClientButton: { marginBottom: spacing.md },
   modalSpinner: { marginTop: spacing.md },
   clientRow: { minHeight: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
+  clientRowCopy: { flex: 1, minWidth: 0, marginRight: spacing.sm },
   clientName: { color: colors.ink, fontSize: 13, fontWeight: fontWeights.bold },
   clientMeta: { marginTop: spacing.xs, color: colors.inkMuted, fontSize: 12 },
 });

@@ -43,10 +43,11 @@ describe('parseMinorUnits', () => {
 });
 
 describe('minor unit conversion and calculations', () => {
-  it('converts and formats L 8,420.50 without precision drift', () => {
+  it('converts and formats using the given tenant currency without precision drift', () => {
+    const hnl = { code: 'HNL', symbol: 'L', locale: 'es-HN', price_decimals: 2 };
     const minorUnits = toMinorUnits(8420.50);
     expect(minorUnits).toBe(842050);
-    expect(formatMinorUnits(minorUnits).replace(/\s/g, ' ')).toBe('L 8,420.50');
+    expect(formatMinorUnits(minorUnits, hnl).replace(/\s/g, ' ')).toBe('L 8,420.50');
   });
 
   it('calculates a cash shortfall in integer minor units', () => {

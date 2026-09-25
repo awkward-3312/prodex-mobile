@@ -1,4 +1,4 @@
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 import { apiClient } from '../api/apiClient';
 import { MobilePosCheckoutError, parseClientSearchResponse } from '../pos/mobilePosCheckoutService';
 import type { ClientSearchResponse } from '../../types/mobilePosCheckout';
@@ -19,7 +19,7 @@ export function searchDirectoryClients({ baseUrl, accessToken, search = '', page
     } catch (error) {
       if (error instanceof MobilePosCheckoutError) throw error;
       if (error instanceof ApiError) {
-        if (error.status === 401 || error.code === 'unauthenticated' || error.code === 'token_idle_timeout') throw new MobilePosCheckoutError('session_expired', 'Session expired');
+        if (isAuthInvalidError(error)) throw new MobilePosCheckoutError('session_expired', 'Session expired');
         if (error.status === 403) throw new MobilePosCheckoutError('forbidden', 'Forbidden');
         if (error.status === 429) throw new MobilePosCheckoutError('rate_limited', 'Rate limited');
         if (error.status >= 500) throw new MobilePosCheckoutError('server_error', 'Server error');

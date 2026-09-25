@@ -15,6 +15,8 @@ type Dependencies = {
   storage: AttemptStorage;
   send: (request: SaleSubmissionRequest, token: string) => Promise<SaleSubmissionResponse>;
   confirmed: () => void;
+  /** Device connectivity, injected so it's independently testable without a real NetInfo. */
+  isOnline: () => boolean;
 };
 
 /** Owns the frozen request beyond screen mounts. No timer/background task can submit. */
@@ -58,6 +60,12 @@ export class SaleSubmissionController {
       this.update({ ...this.state, status: 'business_error', error: new SaleSubmissionError('business_error', 'stale_preflight') });
       return;
     }
+    if (!this.deps.isOnline()) {
+      // Nothing sent yet: no UUID burned, no attempt persisted. Editable like any
+      // other business_error, not a lost/uncertain in-flight submission.
+      this.update({ ...this.state, status: 'business_error', error: new SaleSubmissionError('business_error', 'offline') });
+      return;
+    }
     this.busy = true;
     try {
       this.draftUuid ??= this.deps.uuid();
@@ -75,6 +83,11 @@ export class SaleSubmissionController {
   async retry(token: string): Promise<void> {
     if (this.busy || !['uncertain', 'session_expired'].includes(this.state.status)) return;
     if (!this.state.attempt) { this.restored = null; await this.restore(); return; }
+    if (!this.deps.isOnline()) {
+      // Keep the frozen attempt and its sale_uuid exactly as-is; only the message changes.
+      this.update({ ...this.state, error: new SaleSubmissionError('uncertain', 'offline') });
+      return;
+    }
     const attempt = this.state.attempt;
     this.busy = true;
     this.update({ status: 'submitting', attempt, error: null });

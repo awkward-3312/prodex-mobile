@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { PressableScale } from '../motion';
 import { SearchField } from '../ui/SearchField';
 import { colors, radii, sizing, spacing } from '../../theme';
 
@@ -20,9 +21,9 @@ export function PosSearchBar({ value, onChangeText, onScanPress }: Props) {
         onChangeText={onChangeText}
         style={styles.searchBox}
       />
-      <Pressable accessibilityLabel="Escanear código de barras" accessibilityRole="button" onPress={onScanPress} style={({ pressed }) => [styles.scan, pressed && styles.pressed]}>
+      <PressableScale accessibilityLabel="Escanear código de barras" accessibilityRole="button" onPress={onScanPress} style={styles.scan}>
         <Ionicons name="scan-outline" size={23} color={colors.brand} />
-      </Pressable>
+      </PressableScale>
     </View>
   );
 }
@@ -31,5 +32,4 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   searchBox: { flex: 1 },
   scan: { width: sizing.input, height: sizing.input, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft, borderWidth: 1, borderColor: colors.brandSoft },
-  pressed: { opacity: 0.7 },
 });

@@ -8,6 +8,8 @@ import { getAuthErrorMessage } from './authErrorMessage';
 import { getSignInFailure } from './authSignIn';
 import type { SignInResult } from './authSignIn';
 import type { AuthSession, AuthStatus, AuthenticatedUser, InventoryLocation, MobileBootstrap, OperationalContext, TenantInfo } from '../types/auth';
+import { setActiveCurrency } from '../utils/formatCurrency';
+import { isOnline, useConnectivity } from '../services/connectivity/connectivityController';
 
 type AuthState = {
   status: AuthStatus;
@@ -66,6 +68,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const bootstrapSession = useCallback(async (session: AuthSession, preserveOnFailure: boolean) => {
     dispatch({ type: 'status', status: 'bootstrapping' });
+    if (!isOnline()) {
+      // Never attempt a request we already know cannot succeed; the saved
+      // session is untouched, so retrying (manually or on reconnect) is safe.
+      dispatch({ type: 'error', message: 'Sin conexión a internet. Conéctate y vuelve a intentarlo.', preserveSession: preserveOnFailure });
+      return false;
+    }
     try {
       const data = await bootstrapRequest(session.baseUrl, session.accessToken);
       dispatch({ type: 'bootstrap', data });
@@ -82,6 +90,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
   }, []);
+
+  useEffect(() => {
+    const preferences = state.bootstrap?.preferences;
+    if (preferences?.currency_code && preferences?.currency_symbol) {
+      setActiveCurrency({
+        code: preferences.currency_code,
+        symbol: preferences.currency_symbol,
+        locale: preferences.locale ?? null,
+        price_decimals: typeof preferences.price_decimals === 'number' ? preferences.price_decimals : 2,
+      });
+    } else {
+      setActiveCurrency(null);
+    }
+  }, [state.bootstrap]);
 
   useEffect(() => {
     let active = true;
@@ -128,6 +150,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!state.session) return false;
     return bootstrapSession(state.session, true);
   }, [bootstrapSession, state.session]);
+
+  const connectivity = useConnectivity();
+  useEffect(() => {
+    // Safe to auto-retry: bootstrap is a read-only GET, and this only fires
+    // for a session we already have and already failed to bootstrap.
+    if (connectivity.status === 'online' && state.status === 'bootstrap_error' && state.session) {
+      void bootstrapSession(state.session, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectivity.status]);
 
   const value = useMemo<AuthContextValue>(() => ({
     status: state.status,

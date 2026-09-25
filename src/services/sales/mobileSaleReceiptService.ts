@@ -1,4 +1,4 @@
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 import { apiClient } from '../api/apiClient';
 
 export type MobileSaleReceiptErrorStatus =
@@ -8,6 +8,8 @@ export type MobileSaleReceiptErrorStatus =
   | 'server_error'
   | 'network_error'
   | 'timeout'
+  | 'cancelled'
+  | 'offline'
   | 'invalid_response';
 
 export class MobileSaleReceiptError extends Error {
@@ -40,13 +42,14 @@ export function parseMobileSaleReceipt(payload: unknown): MobileSaleReceipt {
 }
 
 function mapApiError(error: ApiError): MobileSaleReceiptError {
-  if (error.status === 401 || error.code === 'unauthenticated' || error.code === 'token_idle_timeout') {
+  if (isAuthInvalidError(error)) {
     return new MobileSaleReceiptError('session_expired', 'Session expired');
   }
   if (error.status === 403) return new MobileSaleReceiptError('forbidden', 'Forbidden');
   if (error.status === 404) return new MobileSaleReceiptError('not_found', 'Not found');
   if (error.status >= 500) return new MobileSaleReceiptError('server_error', 'Server error');
   if (error.code === 'timeout') return new MobileSaleReceiptError('timeout', 'Timeout');
+  if (error.code === 'cancelled') return new MobileSaleReceiptError('cancelled', 'Cancelled');
   if (error.code === 'network_error') return new MobileSaleReceiptError('network_error', 'Network error');
   return new MobileSaleReceiptError('invalid_response', 'Unexpected receipt error');
 }
@@ -54,6 +57,7 @@ function mapApiError(error: ApiError): MobileSaleReceiptError {
 /** Never reveal whether a sale exists in another tenant/branch: 403 and 404 share one message. */
 export function mobileSaleReceiptMessage(status: MobileSaleReceiptErrorStatus): string {
   if (status === 'forbidden' || status === 'not_found') return 'No tienes acceso a esta venta.';
+  if (status === 'offline') return 'Sin conexión a internet. Conéctate para ver la factura.';
   return 'No pudimos cargar la factura.';
 }
 

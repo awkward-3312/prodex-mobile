@@ -5,9 +5,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BrandSignature } from '../../src/components/ui/BrandSignature';
 import { UserAvatar } from '../../src/components/ui/UserAvatar';
+import { AppHeader } from '../../src/components/ui/AppHeader';
 import { EmptyState } from '../../src/components/ui/EmptyState';
+import { StatHeroCard } from '../../src/components/ui/StatHeroCard';
 import { SaleRow } from '../../src/components/sales/SaleRow';
 import { FadeInView, PressableScale } from '../../src/components/motion';
 import { QuickAction } from '../../src/components/QuickAction';
@@ -36,15 +37,17 @@ function timeGreeting(): string {
   return 'Buenas noches';
 }
 
-function DeltaBadge({ pct, tone }: { pct: number | null; tone: 'onDark' | 'onLight' }) {
+/** Comparison vs. yesterday: a swing in either direction is normal business
+ * signal, not an error state, so it reads green/amber (never red) here. */
+function DeltaChip({ pct }: { pct: number | null }) {
   if (pct === null) return null;
   const positive = pct >= 0;
-  const color = tone === 'onDark' ? colors.white : positive ? colors.brandDark : colors.red;
-  const background = tone === 'onDark' ? 'rgba(255,255,255,0.16)' : positive ? colors.brandSoft : colors.redSoft;
+  const color = positive ? colors.green : colors.amber;
+  const background = positive ? colors.greenSoft : colors.amberSoft;
   return (
-    <View style={[styles.deltaBadge, { backgroundColor: background }]}>
-      <Ionicons name={positive ? 'arrow-up' : 'arrow-down'} size={11} color={color} />
-      <Text style={[styles.deltaText, { color }]}>{Math.abs(pct)}%</Text>
+    <View style={[styles.deltaChip, { backgroundColor: background }]}>
+      <Ionicons name={positive ? 'trending-up' : 'trending-down'} size={12} color={color} />
+      <Text style={[styles.deltaText, { color }]}>{Math.abs(pct)}% vs. ayer</Text>
     </View>
   );
 }
@@ -97,24 +100,17 @@ export default function DashboardScreen() {
   }, [load]);
 
   const maxWeekTotal = summary ? Math.max(1, ...summary.week.days.map((day) => Number(day.total))) : 1;
+  const greeting = `${timeGreeting()}${firstName ? `, ${firstName}` : ''}`;
+  const contextLine = [companyName, branchName].filter(Boolean).join(' · ');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <BrandSignature size="sm" />
-          <View style={styles.headerActions}>
-            <View style={styles.bellButton}><Ionicons name="notifications-outline" size={18} color={colors.ink} /></View>
-            <UserAvatar size={36} />
-          </View>
-        </View>
-
-        <FadeInView style={styles.welcome}>
-          <Text style={styles.greeting}>{timeGreeting()}{firstName ? `, ${firstName}` : ''}</Text>
-          <Text style={styles.welcomeText} numberOfLines={1}>{companyName}{branchName ? ` · ${branchName}` : ''} · Resumen de hoy</Text>
+        <FadeInView>
+          <AppHeader title={greeting} subtitle={contextLine} trailing={<UserAvatar size={36} />} />
         </FadeInView>
 
-        <Text style={styles.sectionTitle}>Acciones rápidas</Text>
+        <Text style={styles.sectionTitle}>Accesos rápidos</Text>
         <View style={styles.actionsGrid}>
           <QuickAction label={registerStatus === 'open' ? 'Nueva venta' : 'Abrir caja'} icon="add" primary onPress={() => router.push(registerStatus === 'open' ? '/(tabs)/pos' : '/cash-register/open')} />
           <QuickAction label="Productos" icon="pricetag-outline" onPress={() => router.push('/(tabs)/inventory')} />
@@ -128,30 +124,29 @@ export default function DashboardScreen() {
           <EmptyState icon="cloud-offline-outline" title={errorMessage} actionLabel="Reintentar" onAction={load} compact />
         ) : summary ? (
           <FadeInView distance={6}>
-            <View style={styles.hero}>
-              <View style={styles.heroTopRow}>
-                <Text style={styles.heroEyebrow}>Ventas de hoy</Text>
-                <DeltaBadge pct={summary.today.salesTotalDeltaPct} tone="onDark" />
-              </View>
-              <Text style={styles.heroValue}>{formatCurrency(Number(summary.today.salesTotal))}</Text>
-              <View style={styles.heroMetricsRow}>
-                <View style={styles.heroMetric}><Text style={styles.heroMetricLabel}>Ingresos</Text><Text style={styles.heroMetricValue}>{formatCurrency(Number(summary.today.salesTotal))}</Text></View>
-                <View style={styles.heroMetric}><Text style={styles.heroMetricLabel}>Número de ventas</Text><Text style={styles.heroMetricValue}>{summary.today.salesCount}</Text></View>
-              </View>
-            </View>
+            <StatHeroCard
+              variant="dark"
+              icon="cash-outline"
+              title="Ventas de hoy"
+              value={formatCurrency(Number(summary.today.salesTotal))}
+              subtitle={`${summary.today.salesCount} ${summary.today.salesCount === 1 ? 'venta' : 'ventas'} hoy`}
+            />
+            <View style={styles.deltaRow}><DeltaChip pct={summary.today.salesTotalDeltaPct} /></View>
 
-            <View style={styles.ticketCard}>
-              <Text style={styles.ticketLabel}>Ticket promedio</Text>
-              <Text style={styles.ticketValue}>{formatCurrency(Number(summary.today.averageSale))}</Text>
-              <DeltaBadge pct={summary.today.averageSaleDeltaPct} tone="onLight" />
-            </View>
+            <StatHeroCard
+              variant="soft"
+              icon="receipt-outline"
+              title="Ticket promedio"
+              value={formatCurrency(Number(summary.today.averageSale))}
+              style={styles.secondaryHero}
+            />
+            <View style={styles.deltaRow}><DeltaChip pct={summary.today.averageSaleDeltaPct} /></View>
 
             <View style={styles.card}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.cardTitle}>Ventas de la semana</Text>
+                <View><Text style={styles.cardTitle}>Ventas de la semana</Text><Text style={styles.weekTotal}>{formatCurrency(Number(summary.week.total))}</Text></View>
                 {canViewReports ? <PressableScale accessibilityRole="button" accessibilityLabel="Ver reporte" onPress={() => router.push('/reports')}><Text style={styles.link}>Ver reporte</Text></PressableScale> : null}
               </View>
-              <Text style={styles.weekTotal}>{formatCurrency(Number(summary.week.total))}</Text>
               <View style={styles.chartRow}>
                 {summary.week.days.map((day) => {
                   const value = Number(day.total);
@@ -200,40 +195,25 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xxl },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  bellButton: { width: 36, height: 36, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
-  welcome: { marginTop: spacing.lg },
-  greeting: { color: colors.ink, fontSize: 22, fontWeight: fontWeights.bold, letterSpacing: -0.5 },
-  welcomeText: { marginTop: 2, color: colors.inkMuted, fontSize: 13 },
   sectionTitle: { marginTop: spacing.xl, marginBottom: spacing.sm, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
   actionsGrid: { flexDirection: 'row', gap: spacing.sm },
   center: { paddingTop: spacing.xxl, alignItems: 'center' },
-  hero: { marginTop: spacing.xl, borderRadius: radii.lg, backgroundColor: colors.ink, padding: spacing.lg },
-  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroEyebrow: { color: '#B9C7C4', fontSize: 12, fontWeight: fontWeights.semibold },
-  heroValue: { marginTop: spacing.sm, color: colors.white, fontSize: 32, fontWeight: fontWeights.heavy, letterSpacing: -0.8 },
-  heroMetricsRow: { flexDirection: 'row', gap: spacing.xl, marginTop: spacing.lg },
-  heroMetric: { flex: 1 },
-  heroMetricLabel: { color: '#B9C7C4', fontSize: 11 },
-  heroMetricValue: { marginTop: 2, color: colors.white, fontSize: 15, fontWeight: fontWeights.bold },
-  deltaBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.pill },
+  secondaryHero: { marginTop: spacing.md },
+  deltaRow: { flexDirection: 'row', marginTop: spacing.sm },
+  deltaChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.sm, paddingVertical: 5, borderRadius: radii.pill },
   deltaText: { fontSize: 11, fontWeight: fontWeights.bold },
-  ticketCard: { ...surfaces.card, marginTop: spacing.md, padding: spacing.lg, alignItems: 'flex-start', gap: spacing.xs },
-  ticketLabel: { color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.semibold },
-  ticketValue: { color: colors.ink, fontSize: 22, fontWeight: fontWeights.bold },
-  card: { ...surfaces.card, marginTop: spacing.md, padding: spacing.lg },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
+  card: { ...surfaces.card, marginTop: spacing.lg, padding: spacing.lg },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: spacing.md },
   cardTitle: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
   link: { color: colors.brand, fontSize: 12, fontWeight: fontWeights.bold },
-  weekTotal: { color: colors.ink, fontSize: 24, fontWeight: fontWeights.heavy, marginBottom: spacing.md },
+  weekTotal: { marginTop: 2, color: colors.brandDark, fontSize: typography.metric, fontWeight: fontWeights.heavy },
   chartRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 96, gap: spacing.xs },
   chartBarColumn: { flex: 1, alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: spacing.xs },
   chartBarTrack: { width: '100%', flex: 1, justifyContent: 'flex-end', borderRadius: radii.xs, overflow: 'hidden', backgroundColor: colors.canvas },
   chartBarFill: { width: '100%', borderRadius: radii.xs, backgroundColor: colors.brandSoft },
-  chartBarFillActive: { backgroundColor: colors.brand },
+  chartBarFillActive: { backgroundColor: colors.accent },
   chartBarLabel: { color: colors.inkMuted, fontSize: 11, fontWeight: fontWeights.semibold },
-  chartBarLabelActive: { color: colors.brand },
+  chartBarLabelActive: { color: colors.brandDark },
   topProductRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   topProductRank: { color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.bold, width: 16 },
   topProductName: { flex: 1, color: colors.ink, fontSize: 13, fontWeight: fontWeights.semibold },

@@ -1,5 +1,5 @@
 import { apiClient } from '../api/apiClient';
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 import type { SalePreflightRequest } from '../../types/mobilePosSalePreflight';
 import type { SaleSubmissionRequest, SaleSubmissionResponse } from '../../types/mobileSaleSubmission';
 
@@ -44,6 +44,7 @@ export function saleSubmissionMessage(code: string): string {
     session_expired: 'Tu sesión expiró. Inicia sesión con la misma cuenta para revisar esta confirmación.',
     storage_error: 'No pudimos guardar la confirmación en este dispositivo. Reintenta antes de continuar.',
     stale_preflight: 'Los datos cambiaron. Revisa la venta nuevamente antes de confirmarla.',
+    offline: 'Sin conexión a internet. Conéctate y vuelve a intentarlo.',
   };
   return messages[code] ?? 'No pudimos confirmar la respuesta. Puedes reintentar de forma segura.';
 }
@@ -81,7 +82,7 @@ export async function submitMobileSale({ baseUrl, accessToken, request }: { base
   } catch (error) {
     if (error instanceof SaleSubmissionError) throw error;
     if (error instanceof ApiError) {
-      if (error.status === 401 || error.code === 'token_idle_timeout') throw new SaleSubmissionError('session_expired', 'session_expired');
+      if (isAuthInvalidError(error)) throw new SaleSubmissionError('session_expired', 'session_expired');
       if (error.status === 403) throw new SaleSubmissionError('business_error', 'forbidden');
       if (error.status === 422) throw new SaleSubmissionError('business_error', error.code ?? 'validation_error');
       if (error.status === 409 && error.code === 'cash_register_not_open') throw new SaleSubmissionError('business_error', 'cash_register_not_open');

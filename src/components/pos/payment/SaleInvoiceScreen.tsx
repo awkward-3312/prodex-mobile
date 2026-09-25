@@ -5,8 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { PressableScale } from '../../motion';
+import { Button } from '../../ui/Button';
 import { getMobileSaleReceipt, MobileSaleReceiptError } from '../../../services/sales/mobileSaleReceiptService';
 import type { MobileSaleReceipt, MobileSaleReceiptErrorStatus } from '../../../services/sales/mobileSaleReceiptService';
+import { isOnline, useConnectivity } from '../../../services/connectivity/connectivityController';
 import { colors, fontWeights, radii, spacing, sizing, typography } from '../../../theme';
 
 type Action = { label: string; onPress: () => void };
@@ -41,9 +43,19 @@ export function SaleInvoiceScreen({ saleId, baseUrl, accessToken, primaryAction,
   // saleId instead of refetching on every parent re-render.
   const onSessionExpiredRef = useRef(onSessionExpired);
   onSessionExpiredRef.current = onSessionExpired;
+  const connectivity = useConnectivity();
+  const offlineAtLoadRef = useRef(false);
 
   const load = useCallback(() => {
     abortRef.current?.abort();
+    if (!isOnline()) {
+      // Skip a fetch we already know cannot succeed; the sale itself is unaffected.
+      offlineAtLoadRef.current = true;
+      setLoading(false);
+      setErrorStatus('offline');
+      return;
+    }
+    offlineAtLoadRef.current = false;
     const controller = new AbortController();
     abortRef.current = controller;
     setLoading(true);
@@ -63,6 +75,11 @@ export function SaleInvoiceScreen({ saleId, baseUrl, accessToken, primaryAction,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseUrl, accessToken, saleId]);
 
+  // Safe to auto-retry: read-only GET, nothing was sent while offline.
+  useEffect(() => {
+    if (connectivity.status === 'online' && offlineAtLoadRef.current) load();
+  }, [connectivity.status, load]);
+
   useEffect(() => {
     load();
     return () => abortRef.current?.abort();
@@ -79,14 +96,14 @@ export function SaleInvoiceScreen({ saleId, baseUrl, accessToken, primaryAction,
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        {onBack ? <PressableScale accessibilityLabel="Volver" accessibilityRole="button" onPress={onBack} style={styles.back}><Ionicons name="arrow-back" size={20} color={colors.ink} /></PressableScale> : <Ionicons name="receipt-outline" size={18} color={colors.brand} />}
+        {onBack ? <PressableScale accessibilityLabel="Volver" accessibilityRole="button" onPress={onBack} style={styles.back}><Ionicons name="arrow-back" size={21} color={colors.ink} /></PressableScale> : <Ionicons name="receipt-outline" size={18} color={colors.brand} />}
         <Text accessibilityRole="header" style={styles.title}>Factura</Text>
         <Text style={styles.reference}>{receipt.reference}</Text>
       </View>
       <WebView originWhitelist={['*']} source={{ html: receipt.html }} style={styles.webview} />
       <View style={styles.actions}>
-        <PressableScale accessibilityRole="button" onPress={primaryAction.onPress} style={styles.primary}><Text style={styles.primaryText}>{primaryAction.label}</Text></PressableScale>
-        {secondaryAction ? <PressableScale accessibilityRole="button" onPress={secondaryAction.onPress} style={styles.secondary}><Text style={styles.secondaryText}>{secondaryAction.label}</Text></PressableScale> : null}
+        <Button label={primaryAction.label} onPress={primaryAction.onPress} fullWidth={false} style={styles.actionButton} />
+        {secondaryAction ? <Button label={secondaryAction.label} variant="secondary" onPress={secondaryAction.onPress} fullWidth={false} style={styles.actionButton} /> : null}
       </View>
     </SafeAreaView>
   );
@@ -97,13 +114,10 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
   loadingText: { color: colors.inkMuted, fontSize: 13, fontWeight: fontWeights.bold },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  back: { width: 34, height: 34, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  back: { width: sizing.iconButton, height: sizing.iconButton, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   title: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
   reference: { marginLeft: 'auto', color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.semibold },
   webview: { flex: 1 },
   actions: { flexDirection: 'row', gap: spacing.sm, padding: spacing.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
-  primary: { flex: 1, minHeight: sizing.button, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  primaryText: { color: colors.white, fontWeight: fontWeights.bold },
-  secondary: { flex: 1, minHeight: sizing.button, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
-  secondaryText: { color: colors.brandDark, fontWeight: fontWeights.bold },
+  actionButton: { flex: 1 },
 });

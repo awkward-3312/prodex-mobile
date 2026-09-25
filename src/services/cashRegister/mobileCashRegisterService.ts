@@ -1,4 +1,4 @@
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 import { apiClient } from '../api/apiClient';
 
 export type MobileCashRegisterErrorStatus =
@@ -213,7 +213,7 @@ export function parseCashRegisterHistory(payload: unknown): CashRegisterHistoryR
 }
 
 function mapApiError(error: ApiError): MobileCashRegisterError {
-  if (error.status === 401 || error.code === 'unauthenticated' || error.code === 'token_idle_timeout') {
+  if (isAuthInvalidError(error)) {
     return new MobileCashRegisterError('session_expired', 'Session expired');
   }
   if (error.status === 403) return new MobileCashRegisterError('forbidden', 'Forbidden');

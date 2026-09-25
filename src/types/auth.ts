@@ -1,5 +1,6 @@
 export type TenantInfo = {
   base_url: string;
+  company_name?: string;
   [key: string]: unknown;
 };
 
@@ -68,16 +69,24 @@ export type OperationalContext = {
   [key: string]: unknown;
 };
 
+export type MobileBootstrapPreferences = {
+  locale?: string;
+  currency_code?: string;
+  currency_symbol?: string;
+  timezone?: string;
+  date_format?: string;
+  price_format?: string | null;
+  price_decimals?: number;
+  [key: string]: unknown;
+};
+
 export type MobileBootstrap = {
   user?: AuthenticatedUser;
   tenant?: TenantInfo;
-  company_name?: string;
   operational_context?: OperationalContext;
   inventory_locations?: InventoryLocation[];
   permissions?: string[];
-  currency?: Record<string, unknown>;
-  locale?: string;
-  timezone?: string;
+  preferences?: MobileBootstrapPreferences;
   [key: string]: unknown;
 };
 

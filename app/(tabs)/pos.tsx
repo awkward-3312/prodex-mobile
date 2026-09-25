@@ -1,4 +1,5 @@
 import { PosRegisterGuard } from '../../src/components/pos/PosRegisterGuard';
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -15,7 +16,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { useAuth } from '../../src/context/AuthContext';
 import { canAddProductQuantity, usePosCart } from '../../src/context/PosCartContext';
 import { getMobilePosCatalog, mapMobilePosCatalogItemToPosProduct, mergeCatalogPages, MobilePosCatalogError } from '../../src/services/pos/mobilePosCatalogService';
-import { colors, fontWeights, radii, spacing } from '../../src/theme';
+import { colors, fontWeights, radii, shadows, spacing } from '../../src/theme';
 import type { MobilePosCatalogItem, MobilePosCategory, MobilePosPagination } from '../../src/types/mobilePosCatalog';
 import type { PosProduct } from '../../src/types/pos';
 import { decideCheckoutNavigation } from '../../src/utils/posCart';
@@ -57,7 +58,7 @@ function PosScreenContent() {
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [cartVisible, setCartVisible] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<{ text: string; tone: 'success' | 'warning' } | null>(null);
   const pendingCheckoutRef = useRef(false);
   const checkoutNavigatingRef = useRef(false);
   const requestSeq = useRef(0);
@@ -103,8 +104,8 @@ function PosScreenContent() {
   }, [search]);
 
   useEffect(() => {
-    if (message.length === 0) return undefined;
-    const timeout = setTimeout(() => setMessage(''), 2500);
+    if (!message) return undefined;
+    const timeout = setTimeout(() => setMessage(null), 2500);
     return () => clearTimeout(timeout);
   }, [message]);
 
@@ -185,8 +186,8 @@ function PosScreenContent() {
     void loadCatalog({ page: 1, mode: 'replace' });
   }, [categoryId, debouncedSearch, inventoryLocationId, loadCatalog, salesRevision]);
 
-  const showMessage = useCallback((nextMessage: string) => {
-    setMessage(nextMessage);
+  const showMessage = useCallback((text: string, tone: 'success' | 'warning') => {
+    setMessage({ text, tone });
   }, []);
 
   const handleRetry = () => {
@@ -205,16 +206,16 @@ function PosScreenContent() {
   const handleAddProduct = useCallback((product: PosProduct) => {
     if (cartLocked) { router.push('/pos/checkout'); return; }
     if (product.canSell === false) {
-      showMessage(product.sellabilityReason ?? 'Este producto no puede venderse.');
+      showMessage(product.sellabilityReason ?? 'Este producto no puede venderse.', 'warning');
       return;
     }
     const existing = cartItems.find((item) => item.product.id === product.id);
     if (!canAddProductQuantity(existing, product, 1)) {
-      showMessage('Stock máximo alcanzado');
+      showMessage('Stock máximo alcanzado', 'warning');
       return;
     }
     addProduct(product);
-    showMessage(`${product.name} agregado al carrito`);
+    showMessage(`${product.name} agregado al carrito`, 'success');
   }, [addProduct, cartItems, cartLocked, showMessage]);
 
   const handleCheckoutFromCart = useCallback(() => {
@@ -233,10 +234,22 @@ function PosScreenContent() {
     <View style={[styles.productSlot, { width: cardWidth }]}><ProductCard product={item} onPress={() => handleAddProduct(item)} style={styles.productCard} /></View>
   ), [cardWidth, handleAddProduct]);
 
+  const renderSubmissionNotice = () => {
+    if (!cartLocked) return null;
+    const tone = submission.status === 'success' ? 'success' : submission.status === 'loading' ? 'loading' : 'warning';
+    const text = submission.status === 'success' ? 'Venta registrada. Ver confirmación' : submission.status === 'loading' ? 'Comprobando confirmaciones guardadas…' : 'Hay una confirmación pendiente. Revisar venta';
+    return (
+      <PressableScale accessibilityRole="button" onPress={() => router.push('/pos/checkout')} style={[styles.submissionNotice, tone === 'success' && styles.noticeSuccess, tone === 'warning' && styles.noticeWarning]}>
+        {tone === 'loading' ? <ActivityIndicator size="small" color={colors.inkMuted} /> : <Ionicons name={tone === 'success' ? 'checkmark-circle' : 'alert-circle-outline'} size={18} color={tone === 'success' ? colors.green : colors.amber} />}
+        <Text style={[styles.noticeText, tone === 'success' && styles.noticeTextSuccess, tone === 'warning' && styles.noticeTextWarning]}>{text}</Text>
+      </PressableScale>
+    );
+  };
+
   const renderHeader = () => (
     <FadeInView distance={6}>
       <PosHeader />
-      {cartLocked && <PressableScale accessibilityRole="button" onPress={() => router.push('/pos/checkout')} style={styles.submissionNotice}><Text style={styles.messageText}>{submission.status === 'success' ? 'Venta registrada. Ver confirmación' : submission.status === 'loading' ? 'Comprobando confirmaciones guardadas…' : 'Hay una confirmación pendiente. Revisar venta'}</Text></PressableScale>}
+      {renderSubmissionNotice()}
       <PosSearchBar value={search} onChangeText={setSearch} onScanPress={() => router.push('/pos/scanner')} />
       <FlatList
         horizontal
@@ -278,7 +291,7 @@ function PosScreenContent() {
         onEndReachedThreshold={0.35}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
       />
-      {message.length > 0 && <FadeInView distance={8} style={[styles.snackbarWrap, { bottom: 136 + insets.bottom }]}><PressableScale accessibilityLabel="Cerrar mensaje" accessibilityRole="button" onPress={() => setMessage('')} style={styles.snackbar}><Text style={styles.messageText}>{message}</Text><Text style={styles.messageClose}>Cerrar</Text></PressableScale></FadeInView>}
+      {message && <FadeInView distance={8} style={[styles.snackbarWrap, { bottom: 136 + insets.bottom }]}><PressableScale accessibilityLabel="Cerrar mensaje" accessibilityRole="button" onPress={() => setMessage(null)} style={[styles.snackbar, message.tone === 'success' ? styles.snackbarSuccess : styles.snackbarWarning]}><Ionicons name={message.tone === 'success' ? 'checkmark-circle' : 'alert-circle-outline'} size={18} color={message.tone === 'success' ? colors.green : colors.amber} /><Text style={styles.messageText}>{message.text}</Text><Ionicons name="close" size={16} color={colors.inkMuted} /></PressableScale></FadeInView>}
       <CartSummaryBar itemCount={itemCount} totalCents={totalCents} onViewCart={() => setCartVisible(true)} onCheckout={handleCheckoutFromCart} />
       <CartSheet visible={cartVisible} items={cartItems} subtotalCents={subtotalCents} discountCents={discountCents} taxCents={taxCents} totalCents={totalCents} onClose={() => setCartVisible(false)} onIncrease={increase} onDecrease={decrease} onRemove={remove} onCheckout={handleCheckoutFromCart} />
     </SafeAreaView>
@@ -286,7 +299,12 @@ function PosScreenContent() {
 }
 
 const styles = StyleSheet.create({
-  submissionNotice: { marginBottom: spacing.md, padding: spacing.md, minHeight: 44, borderRadius: radii.sm, backgroundColor: colors.amberSoft },
+  submissionNotice: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md, padding: spacing.md, minHeight: 44, borderRadius: radii.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  noticeWarning: { backgroundColor: colors.amberSoft, borderColor: colors.amberSoft },
+  noticeSuccess: { backgroundColor: colors.greenSoft, borderColor: colors.greenSoft },
+  noticeText: { flex: 1, color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.bold, lineHeight: 17 },
+  noticeTextWarning: { color: colors.amber },
+  noticeTextSuccess: { color: colors.green },
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { paddingHorizontal: spacing.lg },
   categories: { gap: spacing.sm, paddingTop: spacing.sm, paddingBottom: spacing.xs },
@@ -297,9 +315,10 @@ const styles = StyleSheet.create({
   productCard: { width: '100%' },
   footerSpinner: { paddingVertical: spacing.lg },
   snackbarWrap: { position: 'absolute', left: spacing.md, right: spacing.md, zIndex: 20 },
-  snackbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.sm, backgroundColor: colors.blueSoft },
-  messageText: { flex: 1, color: colors.ink, fontSize: 12, lineHeight: 17 },
-  messageClose: { marginLeft: spacing.sm, color: colors.blue, fontSize: 11, fontWeight: fontWeights.bold },
+  snackbar: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.sm, ...shadows.card },
+  snackbarSuccess: { backgroundColor: colors.greenSoft },
+  snackbarWarning: { backgroundColor: colors.amberSoft },
+  messageText: { flex: 1, color: colors.ink, fontSize: 12, lineHeight: 17, fontWeight: fontWeights.semibold },
   emptyProducts: { alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
   emptyTitle: { color: colors.ink, fontSize: 15, fontWeight: fontWeights.bold, textAlign: 'center' },
   emptyText: { marginTop: spacing.sm, color: colors.inkMuted, fontSize: 12, textAlign: 'center' },

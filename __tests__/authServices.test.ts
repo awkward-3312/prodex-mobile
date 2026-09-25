@@ -92,9 +92,10 @@ describe('session storage', () => {
 });
 
 describe('auth error classification', () => {
-  it('recognizes 401 and token idle timeout as invalid sessions', () => {
+  it('recognizes 401, token idle timeout, and unauthenticated as invalid sessions', () => {
     expect(isAuthInvalidError(new ApiError({ status: 401, message: 'Unauthorized' }))).toBe(true);
     expect(isAuthInvalidError(new ApiError({ status: 401, code: 'token_idle_timeout', message: 'Expired' }))).toBe(true);
+    expect(isAuthInvalidError(new ApiError({ status: 0, code: 'unauthenticated', message: 'Unauthenticated' }))).toBe(true);
   });
 
   it('does not classify network errors as invalid sessions', () => {
@@ -148,5 +149,33 @@ describe('api client error classification', () => {
       status: 0,
       code: 'timeout',
     });
+  });
+
+  it('still enforces its own timeout when the caller also passes a signal (never silently disabled)', async () => {
+    jest.useFakeTimers();
+    try {
+      const externalController = new AbortController();
+      jest.spyOn(globalThis, 'fetch').mockImplementation((_url, init) => new Promise((_resolve, reject) => {
+        (init as RequestInit).signal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+      }));
+      const promise = apiClient.get('https://tenant.example/api/mobile/auth/bootstrap', { signal: externalController.signal });
+      const assertion = expect(promise).rejects.toMatchObject({ status: 0, code: 'timeout' });
+      await jest.advanceTimersByTimeAsync(authConfig.requestTimeoutMs);
+      await assertion;
+      // The caller's own signal never fired: this really was our timeout, not their cancellation.
+      expect(externalController.signal.aborted).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('classifies a caller-initiated cancellation distinctly from a timeout', async () => {
+    const externalController = new AbortController();
+    jest.spyOn(globalThis, 'fetch').mockImplementation((_url, init) => new Promise((_resolve, reject) => {
+      (init as RequestInit).signal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+    }));
+    const promise = apiClient.get('https://tenant.example/api/mobile/auth/bootstrap', { signal: externalController.signal });
+    externalController.abort();
+    await expect(promise).rejects.toMatchObject({ status: 0, code: 'cancelled' });
   });
 });

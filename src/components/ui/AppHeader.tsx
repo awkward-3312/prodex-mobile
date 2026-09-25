@@ -6,6 +6,13 @@ import { PressableScale } from '../motion';
 import { colors, fontWeights, radii, sizing, spacing, typography } from '../../theme';
 
 type Props = {
+  /**
+   * Anything rendered after the title/subtitle — an avatar, a badge, a
+   * custom control. Use this instead of writing a new screen-specific
+   * header component (e.g. a header that just swaps the icon for an
+   * avatar): pass it as `trailing` here rather than duplicating
+   * AppHeader's title/subtitle layout elsewhere.
+   */
   trailing?: ReactNode;
   title: string;
   subtitle?: string;

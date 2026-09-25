@@ -1,4 +1,4 @@
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 import { apiClient } from '../api/apiClient';
 import type {
   MobileInventoryCategory,
@@ -184,7 +184,7 @@ export function parseMobileInventoryResponse(payload: unknown): MobileInventoryR
 }
 
 function mapApiError(error: ApiError): MobileInventoryError {
-  if (error.status === 401 || error.code === 'unauthenticated' || error.code === 'token_idle_timeout') {
+  if (isAuthInvalidError(error)) {
     return new MobileInventoryError('session_expired', 'Session expired', { httpStatus: error.status, code: error.code });
   }
   if (error.status === 403) {

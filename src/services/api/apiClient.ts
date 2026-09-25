@@ -19,8 +19,17 @@ function isAbortError(error: unknown) {
 }
 
 async function request<T>(method: 'GET' | 'POST' | 'PUT', url: string, options: RequestOptions = {}) {
+  // Always fetch on our own controller so the timeout applies regardless of
+  // whether the caller also passed a signal (e.g. to cancel on unmount).
+  // Either one aborting aborts the request; neither cancels the other.
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), authConfig.requestTimeoutMs);
+  const externalSignal = options.signal;
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener('abort', onExternalAbort);
+  }
 
   try {
     const response = await fetch(url, {
@@ -31,7 +40,7 @@ async function request<T>(method: 'GET' | 'POST' | 'PUT', url: string, options: 
         ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: options.signal ?? controller.signal,
+      signal: controller.signal,
     });
     const text = await response.text();
     let payload: unknown = null;
@@ -47,10 +56,16 @@ async function request<T>(method: 'GET' | 'POST' | 'PUT', url: string, options: 
     return payload as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    if (isAbortError(error)) throw new ApiError({ status: 0, code: 'timeout', message: 'La solicitud tardó demasiado.' });
+    if (isAbortError(error)) {
+      // Distinguish who aborted: the caller's own signal (navigation, unmount,
+      // superseding request) is a cancellation, never our 15s timeout firing.
+      if (externalSignal?.aborted) throw new ApiError({ status: 0, code: 'cancelled', message: 'La solicitud fue cancelada.' });
+      throw new ApiError({ status: 0, code: 'timeout', message: 'La solicitud tardó demasiado.' });
+    }
     throw new ApiError({ status: 0, code: 'network_error', message: 'No se pudo conectar con PRODEX.', details: error });
   } finally {
     clearTimeout(timeout);
+    if (externalSignal) externalSignal.removeEventListener('abort', onExternalAbort);
   }
 }
 
