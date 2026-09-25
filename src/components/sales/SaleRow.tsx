@@ -49,7 +49,7 @@ export const SaleRow = memo(function SaleRow({ sale, onPress }: Props) {
       </View>
       <View style={styles.bottomLine}>
         <Text style={styles.meta} numberOfLines={1}>{customerName}</Text>
-        <StatusBadge label={STATUS_LABEL[sale.payment_status]} tone={sale.payment_status === 'paid' ? 'positive' : 'warning'} />
+        <StatusBadge label={STATUS_LABEL[sale.payment_status]} tone={sale.payment_status === 'paid' ? 'positive' : sale.payment_status === 'partial' ? 'warning' : 'critical'} />
       </View>
       <Text style={styles.date}>{formatSaleDateTime(sale.date)}</Text>
     </View>

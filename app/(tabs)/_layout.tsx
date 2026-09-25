@@ -61,8 +61,8 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: 'Inicio', tabBarAccessibilityLabel: 'Inicio' }} />
       <Tabs.Screen name="pos" options={{ href: status === 'open' && hasPermission('Pos_view') ? '/(tabs)/pos' : null, title: 'POS', tabBarAccessibilityLabel: 'Punto de venta' }} />
-      <Tabs.Screen name="inventory" options={{ title: 'Inventario', tabBarAccessibilityLabel: 'Inventario' }} />
-      <Tabs.Screen name="sales" options={{ title: 'Ventas', tabBarAccessibilityLabel: 'Ventas' }} />
+      <Tabs.Screen name="inventory" options={{ href: hasPermission('Pos_view') ? '/(tabs)/inventory' : null, title: 'Inventario', tabBarAccessibilityLabel: 'Inventario' }} />
+      <Tabs.Screen name="sales" options={{ href: hasPermission('Sales_view') ? '/(tabs)/sales' : null, title: 'Ventas', tabBarAccessibilityLabel: 'Ventas' }} />
       <Tabs.Screen name="more" options={{ title: 'Más', tabBarAccessibilityLabel: 'Más opciones' }} />
     </Tabs>
   );

@@ -1,5 +1,4 @@
-import { posProducts } from '../../config/posMockData';
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 import { apiClient } from '../api/apiClient';
 import type { MobileProductResolveData, MobileProductResolveResponse } from '../../types/mobileProductResolver';
 import type { BarcodeLookupResult, BarcodeSymbology, CartItem, PosProduct, ProductStockStatus } from '../../types/pos';
@@ -23,32 +22,14 @@ export function normalizeBarcodeSymbology(value: string): BarcodeSymbology | nul
   return symbologyMap[value.trim().toLowerCase()] ?? null;
 }
 
-type ResolveProductInput = { code: string; symbology: string };
-type ResolveScannedProductInput = ResolveProductInput & {
+type ResolveScannedProductInput = {
+  code: string;
+  symbology: string;
   tenantBaseUrl: string;
   accessToken: string;
   inventoryLocationId: string | number;
   cartItems?: CartItem[];
 };
-
-export function resolveProductByCode({ code, symbology }: ResolveProductInput, cartItems: CartItem[] = []): BarcodeLookupResult {
-  const normalizedBarcode = normalizeBarcode(code);
-  const normalizedSymbology = normalizeBarcodeSymbology(symbology);
-  if (!normalizedSymbology) return { status: 'not_found', barcode: normalizedBarcode };
-  const product = posProducts.find((candidate) => candidate.barcode === normalizedBarcode);
-
-  if (!product) return { status: 'not_found', barcode: normalizedBarcode };
-  if (product.stock <= 0 || product.stockStatus === 'Sin stock') return { status: 'out_of_stock', product };
-
-  const currentQuantity = cartItems.find((item) => item.product.id === product.id)?.quantity ?? 0;
-  if (currentQuantity >= product.stock) return { status: 'stock_limit_reached', product };
-
-  return { status: 'found', product };
-}
-
-export function findProductByBarcode(barcode: string, cartItems: CartItem[] = []): BarcodeLookupResult {
-  return resolveProductByCode({ code: barcode, symbology: 'code128' }, cartItems);
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object';
@@ -149,7 +130,7 @@ function currentCartQuantity(productId: string, cartItems: CartItem[]) {
 }
 
 function resultFromApiError(error: ApiError): BarcodeLookupResult {
-  if (error.status === 401 || error.code === 'token_idle_timeout' || error.code === 'unauthenticated') return { status: 'session_expired' };
+  if (isAuthInvalidError(error)) return { status: 'session_expired' };
   if (error.status === 404 || error.code === 'product_not_found') return { status: 'not_found', barcode: '' };
   if (error.status === 409 || error.code === 'ambiguous_code') return { status: 'ambiguous_code' };
   if (error.code === 'invalid_location' || error.code === 'forbidden_location') return { status: 'invalid_location' };

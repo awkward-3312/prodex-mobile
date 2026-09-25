@@ -9,8 +9,9 @@ function fixture(raw: string | null = null) {
   const storage = { read: jest.fn(async () => saved), write: jest.fn(async (value: string) => { saved = value; }), remove: jest.fn(async () => { saved = null; }) };
   const send = jest.fn(async (_request: CashRegisterCloseRequest, _token: string) => response);
   const onSuccess = jest.fn();
-  const deps = { owner: 'tenant|user', kind: 'close', storage, send, onSuccess, validateRequest: validCloseRequest, validateResponse: validCloseResponse };
-  return { controller: new CashRegisterOperationController<CashRegisterCloseRequest, CashRegisterCloseResponse>(deps), storage, send, onSuccess, saved: () => saved };
+  const isOnline = jest.fn(() => true);
+  const deps = { owner: 'tenant|user', kind: 'close', storage, send, onSuccess, validateRequest: validCloseRequest, validateResponse: validCloseResponse, isOnline };
+  return { controller: new CashRegisterOperationController<CashRegisterCloseRequest, CashRegisterCloseResponse>(deps), storage, send, onSuccess, isOnline, saved: () => saved };
 }
 it('uses integer cents for denomination totals and signed differences', () => {
   expect(denominationTotal({ '500': 2, '0.20': 3, '0.05': 1 })).toBe('1000.65');

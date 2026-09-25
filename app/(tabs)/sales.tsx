@@ -9,6 +9,7 @@ import { CategoryChip } from '../../src/components/pos/CategoryChip';
 import { SaleRow } from '../../src/components/sales/SaleRow';
 import { AppHeader } from '../../src/components/ui/AppHeader';
 import { EmptyState } from '../../src/components/ui/EmptyState';
+import { PermissionGuard } from '../../src/components/ui/PermissionGuard';
 import { SearchField } from '../../src/components/ui/SearchField';
 import { useAuth } from '../../src/context/AuthContext';
 import { getMobileSales, mergeMobileSalesPages, mobileSaleKey, MobileSalesError, saleReceiptRoute } from '../../src/services/sales/mobileSalesService';
@@ -34,6 +35,14 @@ function salesErrorMessage(error: MobileSalesError) {
 }
 
 export default function SalesScreen() {
+  return (
+    <PermissionGuard permission="Sales_view" title="No tienes permiso para ver el historial de ventas.">
+      <SalesScreenContent />
+    </PermissionGuard>
+  );
+}
+
+function SalesScreenContent() {
   const { salesRevision } = usePosCart();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');

@@ -1,16 +1,31 @@
+/**
+ * PRODEX brand palette (navy/cyan identity). `brand`/`brandDark`/`brandSoft`
+ * keep their names for backward compatibility with every existing screen —
+ * only their hue changed, from green to the logo's navy. Green is no longer
+ * the brand color; it now lives only under `green`/`greenSoft` for the
+ * semantic "positive/success" state (see `semantic.positive`).
+ * `accent`/`accentDark`/`accentSoft` (cyan) are new: the logo's symbol
+ * color, meant for sparing highlight/accent use, not as the default
+ * interactive color (that stays `brand`).
+ */
 export const colors = {
-  brand: '#087F62',
-  brandDark: '#08634C',
-  brandSoft: '#DDF5EC',
-  ink: '#193C38',
-  inkMuted: '#637873',
-  canvas: '#F3F7F5',
+  brand: '#0F2A4A',
+  brandDark: '#0A1E36',
+  brandSoft: '#E7ECF5',
+  accent: '#17B8CE',
+  accentDark: '#0E93A6',
+  accentSoft: '#DFF7FA',
+  ink: '#16233A',
+  inkMuted: '#5B6B80',
+  canvas: '#F4F6FA',
   surface: '#FFFFFF',
-  line: '#DFE9E4',
+  line: '#E1E6EE',
   blue: '#2574D8',
   blueSoft: '#E7F0FF',
   teal: '#087E78',
   tealSoft: '#DFF7F4',
+  green: '#1C9463',
+  greenSoft: '#E1F5EA',
   amber: '#986407',
   amberSoft: '#FFF3D6',
   red: '#B43F48',
@@ -38,6 +53,7 @@ export const radii = {
 } as const;
 
 export const typography = {
+  hero: 34,
   display: 28,
   title: 24,
   subtitle: 16,
@@ -58,11 +74,19 @@ export const fontWeights = {
 
 export const shadows = {
   card: {
-    shadowColor: '#17324D',
+    shadowColor: '#0A1E36',
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.07,
     shadowRadius: 14,
     elevation: 3,
+  },
+  /** Heavier lift for sheets/modals/dialogs sitting above the whole screen. */
+  elevated: {
+    shadowColor: '#0A1E36',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 28,
+    elevation: 12,
   },
 } as const;
 
@@ -112,7 +136,7 @@ export const surfaces = {
 } as const;
 
 export const semantic = {
-  positive: colors.brand,
+  positive: colors.green,
   info: colors.blue,
   inventory: colors.teal,
   warning: colors.amber,

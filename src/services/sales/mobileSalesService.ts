@@ -1,4 +1,4 @@
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 import { apiClient } from '../api/apiClient';
 import type {
   MobileSale,
@@ -170,7 +170,7 @@ export function parseMobileSalesResponse(payload: unknown): MobileSalesResponse 
 }
 
 function mapApiError(error: ApiError): MobileSalesError {
-  if (error.status === 401 || error.code === 'unauthenticated' || error.code === 'token_idle_timeout') {
+  if (isAuthInvalidError(error)) {
     return new MobileSalesError('session_expired', 'Session expired', { httpStatus: error.status, code: error.code });
   }
   if (error.status === 403) {

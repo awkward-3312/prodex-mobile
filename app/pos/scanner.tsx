@@ -9,9 +9,10 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FadeInView, PressableScale } from '../../src/components/motion';
+import { Button } from '../../src/components/ui/Button';
 import { usePosCart } from '../../src/context/PosCartContext';
 import { useAuth } from '../../src/context/AuthContext';
-import { colors, fontWeights, radii, sizing, spacing, typography } from '../../src/theme';
+import { colors, fontWeights, radii, spacing, typography } from '../../src/theme';
 import { resolveScannedProduct } from '../../src/services/pos/productBarcodeService';
 
 const barcodeTypes: BarcodeType[] = ['code128', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code39'];
@@ -20,7 +21,7 @@ function ScannerScreenContent() {
   const [permission, requestPermission] = useCameraPermissions();
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [isProcessingScan, setIsProcessingScan] = useState(false);
-  const [feedback, setFeedback] = useState<{ title: string; detail?: string; tone: 'info' | 'error' } | null>(null);
+  const [feedback, setFeedback] = useState<{ title: string; detail?: string; tone: 'info' | 'success' | 'error' } | null>(null);
   const [cameraError, setCameraError] = useState(false);
   const scanLock = useRef(false);
   const { items, addProduct } = usePosCart();
@@ -57,7 +58,7 @@ function ScannerScreenContent() {
 
     if (result.status === 'found') {
       addProduct(result.product, result.quantity ?? 1);
-      setFeedback({ title: `${result.product.name}${result.product.variantName ? ` · ${result.product.variantName}` : ''} agregado`, tone: 'info' });
+      setFeedback({ title: `${result.product.name}${result.product.variantName ? ` · ${result.product.variantName}` : ''} agregado`, tone: 'success' });
       setTimeout(() => router.back(), 450);
       return;
     }
@@ -93,16 +94,16 @@ function ScannerScreenContent() {
   if (!permission) return <View style={styles.loading}><Text style={styles.loadingText}>Preparando cámara...</Text></View>;
 
   if (!permission.granted) {
-    return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><FadeInView style={styles.center}><Text style={styles.title}>Acceso a la cámara</Text><Text style={styles.description}>PRODEX necesita acceso a la cámara para escanear códigos de barras de productos.</Text><PressableScale accessibilityLabel="Permitir acceso a la cámara" accessibilityRole="button" onPress={requestPermission} style={styles.primary}><Text style={styles.primaryText}>Reintentar permiso</Text></PressableScale>{!permission.canAskAgain && <PressableScale accessibilityLabel="Abrir configuración de cámara" accessibilityRole="button" onPress={() => Linking.openSettings()} style={styles.secondary}><Text style={styles.secondaryText}>Abrir configuración</Text></PressableScale>}<PressableScale accessibilityLabel="Volver al POS" accessibilityRole="button" onPress={() => router.back()} style={styles.closeText}><Text style={styles.closeTextLabel}>Volver al POS</Text></PressableScale></FadeInView></SafeAreaView>;
+    return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><FadeInView style={styles.center}><Text style={styles.title}>Acceso a la cámara</Text><Text style={styles.description}>PRODEX necesita acceso a la cámara para escanear códigos de barras de productos.</Text><Button label="Reintentar permiso" accessibilityLabel="Permitir acceso a la cámara" onPress={requestPermission} style={styles.primaryButton} />{!permission.canAskAgain && <Button label="Abrir configuración" accessibilityLabel="Abrir configuración de cámara" variant="secondary" onPress={() => Linking.openSettings()} style={styles.secondaryButton} />}<PressableScale accessibilityLabel="Volver al POS" accessibilityRole="button" onPress={() => router.back()} style={styles.closeText}><Text style={styles.closeTextLabel}>Volver al POS</Text></PressableScale></FadeInView></SafeAreaView>;
   }
 
-  return <View style={styles.cameraScreen}><CameraView facing="back" enableTorch={torchEnabled} onMountError={() => setCameraError(true)} onBarcodeScanned={isProcessingScan ? undefined : ({ data, type }) => { void processBarcode(data, type); }} barcodeScannerSettings={{ barcodeTypes }} style={StyleSheet.absoluteFill} /><SafeAreaView style={styles.overlay} edges={['top', 'bottom']}><View style={styles.topBar}><PressableScale accessibilityLabel="Cerrar escáner" accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}><Ionicons name="arrow-back" size={21} color={colors.ink} /></PressableScale><View><Text style={styles.cameraTitle}>Escanear producto</Text><Text style={styles.location}>Apunta al código del producto</Text></View><View style={styles.topSpacer} /></View><View style={styles.scannerArea}><View style={styles.frame}><View style={[styles.corner, styles.cornerTopLeft]} /><View style={[styles.corner, styles.cornerTopRight]} /><View style={[styles.corner, styles.cornerBottomLeft]} /><View style={[styles.corner, styles.cornerBottomRight]} /></View><Text style={styles.instruction}>Coloca el código de barras dentro del marco</Text></View><View style={styles.bottomControls}>{cameraError && <FadeInView><Text style={styles.cameraError}>La cámara no está disponible.</Text></FadeInView>}{feedback && <FadeInView style={[styles.feedback, feedback.tone === 'error' && styles.feedbackError]}><Text style={styles.feedbackTitle}>{feedback.title}</Text>{feedback.detail && <Text style={styles.feedbackDetail}>{feedback.detail}</Text>}{feedback.tone === 'error' && <PressableScale accessibilityLabel="Escanear nuevamente" accessibilityRole="button" onPress={retryScan} style={styles.retry}><Text style={styles.retryText}>Escanear nuevamente</Text></PressableScale>}</FadeInView>}<PressableScale accessibilityLabel={torchEnabled ? 'Apagar linterna' : 'Encender linterna'} accessibilityRole="button" onPress={() => setTorchEnabled((current) => !current)} style={styles.torch}><Text style={styles.torchText}>{torchEnabled ? 'Apagar linterna' : 'Linterna'}</Text></PressableScale></View></SafeAreaView></View>;
+  return <View style={styles.cameraScreen}><CameraView facing="back" enableTorch={torchEnabled} onMountError={() => setCameraError(true)} onBarcodeScanned={isProcessingScan ? undefined : ({ data, type }) => { void processBarcode(data, type); }} barcodeScannerSettings={{ barcodeTypes }} style={StyleSheet.absoluteFill} /><SafeAreaView style={styles.overlay} edges={['top', 'bottom']}><View style={styles.topBar}><PressableScale accessibilityLabel="Cerrar escáner" accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}><Ionicons name="arrow-back" size={21} color={colors.ink} /></PressableScale><View><Text style={styles.cameraTitle}>Escanear producto</Text><Text style={styles.location}>Apunta al código del producto</Text></View><View style={styles.topSpacer} /></View><View style={styles.scannerArea}><View style={styles.frame}><View style={[styles.corner, styles.cornerTopLeft]} /><View style={[styles.corner, styles.cornerTopRight]} /><View style={[styles.corner, styles.cornerBottomLeft]} /><View style={[styles.corner, styles.cornerBottomRight]} /></View><Text style={styles.instruction}>Coloca el código de barras dentro del marco</Text></View><View style={styles.bottomControls}>{cameraError && <FadeInView><Text style={styles.cameraError}>La cámara no está disponible.</Text></FadeInView>}{feedback && <FadeInView style={[styles.feedback, feedback.tone === 'error' && styles.feedbackError, feedback.tone === 'success' && styles.feedbackSuccess]}><View style={styles.feedbackHeader}>{feedback.tone === 'success' ? <Ionicons name="checkmark-circle" size={18} color={colors.green} /> : feedback.tone === 'error' ? <Ionicons name="alert-circle-outline" size={18} color={colors.red} /> : null}<Text style={styles.feedbackTitle}>{feedback.title}</Text></View>{feedback.detail && <Text style={styles.feedbackDetail}>{feedback.detail}</Text>}{feedback.tone === 'error' && <PressableScale accessibilityLabel="Escanear nuevamente" accessibilityRole="button" onPress={retryScan} style={styles.retry}><Text style={styles.retryText}>Escanear nuevamente</Text></PressableScale>}</FadeInView>}<PressableScale accessibilityLabel={torchEnabled ? 'Apagar linterna' : 'Encender linterna'} accessibilityRole="button" onPress={() => setTorchEnabled((current) => !current)} style={styles.torch}><Text style={styles.torchText}>{torchEnabled ? 'Apagar linterna' : 'Linterna'}</Text></PressableScale></View></SafeAreaView></View>;
 }
 
 const styles = StyleSheet.create({
-  cameraScreen: { flex: 1, backgroundColor: '#101A20' },
+  cameraScreen: { flex: 1, backgroundColor: colors.brandDark },
   overlay: { flex: 1, justifyContent: 'space-between' },
-  topBar: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: 'rgba(10, 30, 25, 0.62)' },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: 'rgba(10, 30, 54, 0.62)' },
   iconButton: { width: 44, height: 44, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.9)' },
   cameraTitle: { color: colors.white, fontSize: typography.title, fontWeight: fontWeights.bold },
   location: { marginTop: spacing.xs, color: 'rgba(255,255,255,0.78)', fontSize: 11 },
@@ -120,6 +121,8 @@ const styles = StyleSheet.create({
   torchText: { color: colors.ink, fontSize: 12, fontWeight: fontWeights.bold },
   feedback: { width: '100%', marginBottom: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.brandSoft },
   feedbackError: { backgroundColor: colors.redSoft },
+  feedbackSuccess: { backgroundColor: colors.greenSoft },
+  feedbackHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   feedbackTitle: { color: colors.ink, fontSize: 14, fontWeight: fontWeights.bold, textAlign: 'center' },
   feedbackDetail: { marginTop: spacing.xs, color: colors.inkMuted, fontSize: 12, textAlign: 'center' },
   retry: { minHeight: 44, marginTop: spacing.sm, alignItems: 'center', justifyContent: 'center' },
@@ -129,10 +132,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
   title: { color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold, textAlign: 'center' },
   description: { marginTop: spacing.md, color: colors.inkMuted, fontSize: 14, lineHeight: 21, textAlign: 'center' },
-  primary: { width: '100%', minHeight: sizing.button, marginTop: spacing.xl, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  primaryText: { color: colors.white, fontSize: 14, fontWeight: fontWeights.bold },
-  secondary: { width: '100%', minHeight: 44, marginTop: spacing.sm, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
-  secondaryText: { color: colors.brandDark, fontSize: 13, fontWeight: fontWeights.bold },
+  primaryButton: { marginTop: spacing.xl },
+  secondaryButton: { marginTop: spacing.sm },
   closeText: { minHeight: 44, marginTop: spacing.md, alignItems: 'center', justifyContent: 'center' },
   closeTextLabel: { color: colors.inkMuted, fontSize: 13, fontWeight: fontWeights.bold },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas },

@@ -1,16 +1,17 @@
 import { randomUUID } from 'expo-crypto';
 import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { PressableScale } from '../motion';
+import { Button } from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { CashRegisterOperationController } from '../../services/cashRegister/cashRegisterOperationController';
 import { cashRegisterAttemptStorage } from '../../services/cashRegister/cashRegisterAttemptStorage';
+import { isOnline } from '../../services/connectivity/connectivityController';
 import { buildCashRegisterMovementRequest, cashRegisterOperationMessage, submitCashRegisterMovement } from '../../services/cashRegister/mobileCashRegisterOperationService';
 import type { CashRegisterMovementRequest, CashRegisterOperationResponse } from '../../services/cashRegister/mobileCashRegisterOperationService';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { colors, fontWeights, radii, sizing, spacing, surfaces, typography } from '../../theme';
+import { colors, fontWeights, radii, spacing, surfaces, typography } from '../../theme';
 
 type Step = 'form' | 'confirm';
 
@@ -47,6 +48,7 @@ export function CashMovementModal({
       storage: owner ? cashRegisterAttemptStorage(owner, kind) : { read: async () => null, write: async () => {}, remove: async () => {} },
       send: (request, accessToken) => submitCashRegisterMovement({ baseUrl: session?.baseUrl ?? '', accessToken, request }),
       onSuccess: (response) => onSuccess(response),
+      isOnline,
     });
     controllers.current.set(cacheKey, created);
     return created;
@@ -57,6 +59,7 @@ export function CashMovementModal({
   const title = type === 'in' ? 'Entrada de efectivo' : 'Salida de efectivo';
   const icon = type === 'in' ? 'arrow-down-circle-outline' : 'arrow-up-circle-outline';
   const accent = type === 'in' ? colors.brand : colors.amber;
+  const accentSoft = type === 'in' ? colors.brandSoft : colors.amberSoft;
 
   const reset = () => {
     setStep('form');
@@ -124,8 +127,9 @@ export function CashMovementModal({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
+          <View style={styles.handle} />
           <View style={styles.headerRow}>
-            <View style={[styles.iconBadge, { backgroundColor: `${accent}1A` }]}>
+            <View style={[styles.iconBadge, { backgroundColor: accentSoft }]}>
               <Ionicons name={icon} size={22} color={accent} />
             </View>
             <Text accessibilityRole="header" style={styles.title}>{title}</Text>
@@ -159,9 +163,7 @@ export function CashMovementModal({
                 multiline
               />
               {formError ? <Text accessibilityRole="alert" style={styles.error}>{formError}</Text> : null}
-              <PressableScale accessibilityRole="button" style={[styles.primary, { backgroundColor: accent }]} onPress={handleContinue}>
-                <Text style={styles.primaryText}>Continuar</Text>
-              </PressableScale>
+              <Button label="Continuar" onPress={handleContinue} style={[styles.actionButton, { backgroundColor: accent, borderColor: accent }]} />
             </View>
           ) : (
             <View>
@@ -183,21 +185,13 @@ export function CashMovementModal({
               ) : null}
 
               {uncertain ? (
-                <PressableScale accessibilityRole="button" style={[styles.primary, { backgroundColor: accent }]} onPress={handleRetry} disabled={submitting}>
-                  {submitting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryText}>Reintentar</Text>}
-                </PressableScale>
+                <Button label="Reintentar" onPress={handleRetry} loading={submitting} style={[styles.actionButton, { backgroundColor: accent, borderColor: accent }]} />
               ) : businessError ? (
-                <PressableScale accessibilityRole="button" style={styles.secondary} onPress={() => { controller.reset(); setStep('form'); }}>
-                  <Text style={styles.secondaryText}>Corregir</Text>
-                </PressableScale>
+                <Button label="Corregir" variant="secondary" onPress={() => { controller.reset(); setStep('form'); }} style={styles.actionButton} />
               ) : (
                 <View style={styles.confirmRow}>
-                  <PressableScale accessibilityRole="button" style={styles.secondary} onPress={() => setStep('form')} disabled={submitting}>
-                    <Text style={styles.secondaryText}>Cancelar</Text>
-                  </PressableScale>
-                  <PressableScale accessibilityRole="button" style={[styles.primary, styles.confirmPrimary, { backgroundColor: accent }]} onPress={handleConfirm} disabled={submitting}>
-                    {submitting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryText}>Confirmar</Text>}
-                  </PressableScale>
+                  <Button label="Cancelar" variant="secondary" fullWidth={false} onPress={() => setStep('form')} disabled={submitting} style={styles.confirmButton} />
+                  <Button label="Confirmar" fullWidth={false} onPress={handleConfirm} loading={submitting} style={[styles.confirmButton, { backgroundColor: accent, borderColor: accent }]} />
                 </View>
               )}
             </View>
@@ -209,8 +203,9 @@ export function CashMovementModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(15,26,23,0.45)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: colors.canvas, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg, padding: spacing.xl, paddingBottom: spacing.xxl },
+  backdrop: { flex: 1, backgroundColor: 'rgba(10, 30, 54, 0.4)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg, padding: spacing.xl, paddingBottom: spacing.xxl },
+  handle: { alignSelf: 'center', width: 38, height: 4, marginBottom: spacing.md, borderRadius: radii.pill, backgroundColor: colors.line },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
   iconBadge: { width: 36, height: 36, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
@@ -218,15 +213,12 @@ const styles = StyleSheet.create({
   input: { ...surfaces.card, marginTop: spacing.xs, padding: spacing.md, color: colors.ink, fontSize: 16 },
   notesInput: { minHeight: 72, textAlignVertical: 'top' },
   error: { color: colors.red, marginTop: spacing.md },
-  primary: { minHeight: sizing.button, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xl },
-  primaryText: { color: colors.white, fontWeight: fontWeights.bold },
-  secondary: { minHeight: sizing.button, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xl, paddingHorizontal: spacing.lg },
-  secondaryText: { color: colors.brandDark, fontWeight: fontWeights.bold },
+  actionButton: { marginTop: spacing.xl },
   confirmCard: { ...surfaces.card, padding: spacing.lg, marginTop: spacing.sm },
   confirmLabel: { color: colors.inkMuted, fontSize: typography.caption, marginTop: spacing.sm },
   confirmAmount: { color: colors.ink, fontSize: typography.display, fontWeight: fontWeights.bold, marginTop: spacing.xs },
   confirmNotes: { color: colors.ink, fontSize: 14, marginTop: spacing.xs },
   warning: { color: colors.inkMuted, fontSize: 12, marginTop: spacing.md, lineHeight: 18 },
-  confirmRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  confirmPrimary: { flex: 1, marginTop: spacing.xl },
+  confirmRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.xl },
+  confirmButton: { flex: 1 },
 });

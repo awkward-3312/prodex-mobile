@@ -5,11 +5,13 @@ import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TextInput, Vie
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PressableScale } from '../../src/components/motion';
 import { AppHeader } from '../../src/components/ui/AppHeader';
+import { Button } from '../../src/components/ui/Button';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { useAuth } from '../../src/context/AuthContext';
 import { useCashRegister } from '../../src/context/CashRegisterContext';
 import { CashRegisterOperationController } from '../../src/services/cashRegister/cashRegisterOperationController';
 import { cashRegisterAttemptStorage } from '../../src/services/cashRegister/cashRegisterAttemptStorage';
+import { isOnline } from '../../src/services/connectivity/connectivityController';
 import { cashRegisterOperationMessage } from '../../src/services/cashRegister/mobileCashRegisterOperationService';
 import { centsMoney, closeCashRegister, CLOSE_MONEY, closeMoneyFields, denominationTotal, reconcileDenominations, moneyCents, validCloseRequest, validCloseResponse, type CashRegisterCloseRequest, type CashRegisterCloseResponse } from '../../src/services/cashRegister/mobileCashRegisterCloseService';
 import { formatCurrency } from '../../src/utils/formatCurrency';
@@ -38,6 +40,7 @@ export default function CloseCashRegisterScreen() {
     owner, kind: 'close', storage: cashRegisterAttemptStorage(owner, 'close'),
     validateRequest: validCloseRequest, validateResponse: validCloseResponse,
     send: (request, accessToken) => closeCashRegister({ baseUrl: session?.baseUrl ?? '', accessToken, request }),
+    isOnline,
   }), [owner, session?.baseUrl]);
   const attempt = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useEffect(() => { if (owner) void controller.restore(); }, [controller, owner]);
@@ -153,11 +156,11 @@ export default function CloseCashRegisterScreen() {
             <Field label="Notas" value={draft.notes} onChange={v => set('notes', v)} />
           </View>
         </>}
-        {difference !== null ? <View style={[styles.card, { backgroundColor: difference === '0.00' ? colors.brandSoft : colors.amber + '12' }]}><Line label={`Diferencia de caja · ${differenceLabel}`} value={money(difference)} /><Text style={styles.muted}>Estimación del conteo; PRODEX confirmará el resultado final.</Text></View> : null}
+        {difference !== null ? <View style={[styles.card, { backgroundColor: difference === '0.00' ? colors.brandSoft : colors.amberSoft }]}><Line label={`Diferencia de caja · ${differenceLabel}`} value={money(difference)} /><Text style={styles.muted}>Estimación del conteo; PRODEX confirmará el resultado final.</Text></View> : null}
         {formError || attempt.error ? <Text accessibilityRole="alert" style={styles.error}>{formError ?? cashRegisterOperationMessage(attempt.error!.code)}</Text> : null}
-        {uncertain ? <><Text style={styles.muted}>Hay un cierre pendiente de confirmar. Reintentar consultará la misma operación guardada.</Text><PressableScale accessibilityRole="button" style={styles.primary} onPress={retry}><Text style={styles.primaryText}>Reintentar cierre</Text></PressableScale></> :
-          attempt.status === 'business_error' ? <PressableScale accessibilityRole="button" style={styles.primary} onPress={() => { controller.reset(); setConfirm(null); setBreakdownConfirmed(false); void refresh(); }}><Text style={styles.primaryText}>Corregir</Text></PressableScale> :
-          <><PressableScale accessibilityRole="button" accessibilityState={{ disabled: busy || (!confirm && !canReview) }} disabled={busy || (!confirm && !canReview)} style={[styles.primary, (busy || (!confirm && !canReview)) && { opacity: 0.6 }]} onPress={confirm ? submit : review}>{busy ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryText}>{confirm ? 'Cerrar caja' : 'Revisar cierre'}</Text>}</PressableScale>
+        {uncertain ? <><Text style={styles.muted}>Hay un cierre pendiente de confirmar. Reintentar consultará la misma operación guardada.</Text><Button label="Reintentar cierre" onPress={retry} /></> :
+          attempt.status === 'business_error' ? <Button label="Corregir" onPress={() => { controller.reset(); setConfirm(null); setBreakdownConfirmed(false); void refresh(); }} /> :
+          <><Button label={confirm ? 'Cerrar caja' : 'Revisar cierre'} onPress={confirm ? submit : review} loading={busy} disabled={!confirm && !canReview} />
           {confirm && !busy ? <PressableScale accessibilityRole="button" style={styles.option} onPress={() => setConfirm(null)}><Text style={styles.value}>Volver al conteo</Text></PressableScale> : null}</>}
       </ScrollView>}
   </SafeAreaView>;
@@ -170,5 +173,5 @@ const styles = StyleSheet.create({
   card: { ...surfaces.card, padding: spacing.lg, gap: spacing.sm }, line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   label: { color: colors.inkMuted, marginTop: spacing.md, marginBottom: spacing.xs }, input: { borderWidth: 1, borderColor: colors.line, borderRadius: radii.md, minHeight: sizing.touch, padding: spacing.md, color: colors.ink, fontSize: 16 }, quantity: { width: 96 },
   option: { padding: spacing.md, borderRadius: radii.md, alignItems: 'center', minHeight: sizing.touch }, selected: { backgroundColor: colors.brandSoft },
-  primary: { minHeight: sizing.button, borderRadius: radii.md, backgroundColor: colors.brandDark, alignItems: 'center', justifyContent: 'center' }, primaryText: { color: colors.white, fontWeight: fontWeights.bold }, error: { color: colors.red },
+  error: { color: colors.red },
 });

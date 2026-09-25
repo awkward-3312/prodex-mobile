@@ -5,8 +5,9 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FadeInView, PressableScale } from '../src/components/motion';
+import { Button } from '../src/components/ui/Button';
 import { useAuth } from '../src/context/AuthContext';
-import { colors, fontWeights, motion, radii, sizing, spacing } from '../src/theme';
+import { colors, fontWeights, radii, sizing, spacing } from '../src/theme';
 
 export default function LoginScreen() {
   const { status, error, session, retryBootstrap, signIn } = useAuth();
@@ -73,9 +74,13 @@ export default function LoginScreen() {
               )}
               {session && error && <PressableScale accessibilityLabel="Reintentar restauración de sesión" accessibilityRole="button" onPress={retry} style={styles.retry}><Text style={styles.retryText}>Reintentar</Text></PressableScale>}
 
-              <PressableScale accessibilityLabel="Iniciar sesión" accessibilityRole="button" accessibilityState={{ disabled: processing }} disabled={processing} onPress={submit} scaleTo={motion.pressScalePrimary} style={[styles.primary, processing && styles.disabled]}>
-                <Text style={styles.primaryText}>{processing ? 'Conectando...' : 'Iniciar sesión'}</Text>
-              </PressableScale>
+              <Button
+                accessibilityLabel="Iniciar sesión"
+                label={processing ? 'Conectando...' : 'Iniciar sesión'}
+                disabled={processing}
+                onPress={submit}
+                style={styles.primary}
+              />
             </View>
             <Text style={styles.footer}>Acceso seguro · Tus datos están protegidos</Text>
           </FadeInView>
@@ -107,8 +112,6 @@ const styles = StyleSheet.create({
   error: { flex: 1, color: colors.red, fontSize: 12, lineHeight: 17, fontWeight: fontWeights.medium },
   retry: { minHeight: 44, marginTop: spacing.sm, alignItems: 'center', justifyContent: 'center' },
   retryText: { color: colors.brand, fontSize: 13, fontWeight: fontWeights.bold },
-  primary: { minHeight: sizing.button, marginTop: spacing.xl, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  primaryText: { color: colors.white, fontSize: 14, fontWeight: fontWeights.bold },
-  disabled: { opacity: 0.5 },
+  primary: { marginTop: spacing.xl },
   footer: { marginTop: spacing.xl, color: colors.inkMuted, fontSize: 11, textAlign: 'center' },
 });

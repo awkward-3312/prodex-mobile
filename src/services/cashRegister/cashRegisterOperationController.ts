@@ -17,6 +17,8 @@ type Dependencies<TRequest, TResult> = {
   validateRequest?: (request: unknown) => boolean;
   validateResponse?: (response: unknown, request: TRequest) => boolean;
   onSuccess?: (response: TResult) => void;
+  /** Device connectivity, injected so it's independently testable without a real NetInfo. */
+  isOnline: () => boolean;
 };
 
 /**
@@ -62,6 +64,12 @@ export class CashRegisterOperationController<TRequest, TResult = CashRegisterOpe
   /** Never called with a freshly generated UUID unless start() itself creates the request. */
   async start(buildRequest: () => TRequest, token: string): Promise<void> {
     if (this.busy || this.state.status === 'success' || this.isLocked()) return;
+    if (!this.deps.isOnline()) {
+      // Nothing sent yet: no UUID burned, no attempt persisted. Editable like any
+      // other business_error, not a lost/uncertain in-flight operation.
+      this.update({ ...this.state, status: 'business_error', error: new CashRegisterOperationError('business_error', 'offline') });
+      return;
+    }
     this.busy = true;
     try {
       const request = JSON.parse(JSON.stringify(buildRequest())) as TRequest;
@@ -79,6 +87,11 @@ export class CashRegisterOperationController<TRequest, TResult = CashRegisterOpe
   async retry(token: string): Promise<void> {
     if (this.busy || !['uncertain', 'session_expired'].includes(this.state.status)) return;
     if (!this.state.attempt) { this.restored = null; await this.restore(); return; }
+    if (!this.deps.isOnline()) {
+      // Keep the frozen attempt and its operation_uuid exactly as-is; only the message changes.
+      this.update({ ...this.state, error: new CashRegisterOperationError('uncertain', 'offline') });
+      return;
+    }
     const attempt = this.state.attempt;
     this.busy = true;
     this.update({ status: 'submitting', attempt, error: null });

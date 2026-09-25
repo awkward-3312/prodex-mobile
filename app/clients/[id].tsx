@@ -7,11 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FadeInView, PressableScale } from '../../src/components/motion';
 import { AppHeader } from '../../src/components/ui/AppHeader';
 import { EmptyState } from '../../src/components/ui/EmptyState';
+import { StatHeroCard } from '../../src/components/ui/StatHeroCard';
 import { useAuth } from '../../src/context/AuthContext';
 import { getMobileClientDetail, mobileClientDetailMessage, MobileClientDetailError } from '../../src/services/clients/mobileClientDetailService';
 import type { MobileClientDetail } from '../../src/services/clients/mobileClientDetailService';
 import { formatCurrency, parseMinorUnits } from '../../src/utils/formatCurrency';
-import { colors, fontWeights, radii, spacing, surfaces, typography } from '../../src/theme';
+import { colors, fontWeights, radii, sizing, spacing, surfaces, typography } from '../../src/theme';
 
 function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
   return (
@@ -65,7 +66,16 @@ export default function ClientDetailScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <AppHeader title="Cliente" onBack={goBack} />
-        {hasPermission?.('Customers_edit') && client ? <PressableScale accessibilityRole="button" onPress={() => router.push({ pathname: '/clients/manage', params: { clientId: String(client.id) } })}><Text>Editar cliente</Text></PressableScale> : null}
+        {hasPermission?.('Customers_edit') && client ? (
+          <PressableScale
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/clients/manage', params: { clientId: String(client.id) } })}
+            style={styles.editButton}
+          >
+            <Ionicons name="create-outline" size={16} color={colors.brand} />
+            <Text style={styles.editButtonText}>Editar cliente</Text>
+          </PressableScale>
+        ) : null}
         {loading ? (
           <View style={styles.center}><ActivityIndicator color={colors.brand} /></View>
         ) : errorMessage ? (
@@ -83,10 +93,13 @@ export default function ClientDetailScreen() {
               {client.address ? <InfoRow icon="location-outline" label="Dirección" value={client.address} /> : null}
             </View>
 
-            <View style={styles.balanceCard}>
-              <Text style={styles.balanceLabel}>Saldo</Text>
-              <Text style={styles.balanceValue}>{formatCurrency(Number(client.balance))}</Text>
-            </View>
+            <StatHeroCard
+              variant="soft"
+              title="Saldo"
+              value={formatCurrency(Number(client.balance))}
+              icon="wallet-outline"
+              style={styles.balanceCard}
+            />
 
             {client.recentSales.length > 0 && (
               <>
@@ -122,6 +135,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
   center: { paddingTop: spacing.xxl, alignItems: 'center' },
+  editButton: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: spacing.xs, marginTop: spacing.sm, paddingHorizontal: spacing.md, minHeight: sizing.touch, borderRadius: radii.pill, backgroundColor: colors.brandSoft },
+  editButtonText: { color: colors.brandDark, fontSize: 13, fontWeight: fontWeights.bold },
   card: { ...surfaces.card, padding: spacing.lg, marginTop: spacing.md },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   avatar: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
@@ -130,9 +145,7 @@ const styles = StyleSheet.create({
   infoCopy: { flex: 1, minWidth: 0 },
   infoLabel: { color: colors.inkMuted, fontSize: 11 },
   infoValue: { marginTop: 1, color: colors.ink, fontSize: 13, fontWeight: fontWeights.semibold },
-  balanceCard: { ...surfaces.card, marginTop: spacing.md, padding: spacing.lg, alignItems: 'center' },
-  balanceLabel: { color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.bold },
-  balanceValue: { marginTop: spacing.xs, color: colors.brandDark, fontSize: 26, fontWeight: fontWeights.heavy },
+  balanceCard: { marginTop: spacing.md },
   sectionTitle: { marginTop: spacing.xl, marginBottom: spacing.sm, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
   salesCard: { ...surfaces.card, paddingHorizontal: spacing.lg },
   saleRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },

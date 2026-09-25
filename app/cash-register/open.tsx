@@ -3,18 +3,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { randomUUID } from 'expo-crypto';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PressableScale } from '../../src/components/motion';
 import { AppHeader } from '../../src/components/ui/AppHeader';
+import { Button } from '../../src/components/ui/Button';
 import { useAuth } from '../../src/context/AuthContext';
 import { CashRegisterOperationController } from '../../src/services/cashRegister/cashRegisterOperationController';
 import { cashRegisterAttemptStorage } from '../../src/services/cashRegister/cashRegisterAttemptStorage';
+import { isOnline } from '../../src/services/connectivity/connectivityController';
 import { buildCashRegisterOpenRequest, cashRegisterOperationMessage, openCashRegister } from '../../src/services/cashRegister/mobileCashRegisterOperationService';
 import type { CashRegisterOpenRequest } from '../../src/services/cashRegister/mobileCashRegisterOperationService';
 import { formatCurrency } from '../../src/utils/formatCurrency';
-import { colors, fontWeights, radii, sizing, spacing, surfaces, typography } from '../../src/theme';
+import { colors, fontWeights, radii, spacing, surfaces, typography } from '../../src/theme';
 
 type Step = 'form' | 'confirm';
 
@@ -36,6 +37,7 @@ export default function OpenCashRegisterScreen() {
       kind: 'open',
       storage: owner ? cashRegisterAttemptStorage(owner, 'open') : { read: async () => null, write: async () => {}, remove: async () => {} },
       send: (request, accessToken) => openCashRegister({ baseUrl: session?.baseUrl ?? '', accessToken, request }),
+      isOnline,
     });
     controllerRef.current = created;
     return created;
@@ -118,9 +120,7 @@ export default function OpenCashRegisterScreen() {
               multiline
             />
             {formError ? <Text accessibilityRole="alert" style={styles.error}>{formError}</Text> : null}
-            <PressableScale accessibilityRole="button" style={styles.primary} onPress={handleContinue}>
-              <Text style={styles.primaryText}>Continuar</Text>
-            </PressableScale>
+            <Button label="Continuar" onPress={handleContinue} style={styles.actionButton} />
           </View>
         ) : (
           <View>
@@ -141,29 +141,21 @@ export default function OpenCashRegisterScreen() {
             ) : null}
 
             {uncertain ? (
-              <PressableScale accessibilityRole="button" style={styles.primary} onPress={handleRetry} disabled={submitting}>
-                {submitting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryText}>Reintentar</Text>}
-              </PressableScale>
+              <Button label="Reintentar" onPress={handleRetry} loading={submitting} style={styles.actionButton} />
             ) : businessError ? (
-              <PressableScale
-                accessibilityRole="button"
-                style={styles.primary}
+              <Button
+                label={alreadyOpen ? 'Ver Caja Actual' : 'Corregir'}
                 onPress={() => {
                   if (alreadyOpen) { router.replace('/cash-register'); return; }
                   controller.reset();
                   setStep('form');
                 }}
-              >
-                <Text style={styles.primaryText}>{alreadyOpen ? 'Ver Caja Actual' : 'Corregir'}</Text>
-              </PressableScale>
+                style={styles.actionButton}
+              />
             ) : (
               <View style={styles.confirmRow}>
-                <PressableScale accessibilityRole="button" style={styles.secondary} onPress={() => setStep('form')} disabled={submitting}>
-                  <Text style={styles.secondaryText}>Cancelar</Text>
-                </PressableScale>
-                <PressableScale accessibilityRole="button" style={[styles.primary, styles.confirmPrimary]} onPress={handleOpen} disabled={submitting}>
-                  {submitting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryText}>Abrir caja</Text>}
-                </PressableScale>
+                <Button label="Cancelar" variant="secondary" fullWidth={false} onPress={() => setStep('form')} disabled={submitting} style={styles.confirmButton} />
+                <Button label="Abrir caja" fullWidth={false} onPress={handleOpen} loading={submitting} style={styles.confirmButton} />
               </View>
             )}
           </View>
@@ -182,15 +174,12 @@ const styles = StyleSheet.create({
   input: { ...surfaces.card, marginTop: spacing.xs, padding: spacing.md, color: colors.ink, fontSize: 16 },
   notesInput: { minHeight: 72, textAlignVertical: 'top' },
   error: { color: colors.red, marginTop: spacing.md },
-  primary: { minHeight: sizing.button, backgroundColor: colors.brand, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xl },
-  primaryText: { color: colors.white, fontWeight: fontWeights.bold },
-  secondary: { minHeight: sizing.button, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xl, paddingHorizontal: spacing.lg },
-  secondaryText: { color: colors.brandDark, fontWeight: fontWeights.bold },
+  actionButton: { marginTop: spacing.xl },
   confirmCard: { ...surfaces.card, padding: spacing.lg, marginTop: spacing.sm, alignItems: 'flex-start' },
   confirmIcon: { width: 40, height: 40, borderRadius: radii.pill, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
   confirmLabel: { color: colors.inkMuted, fontSize: typography.caption, marginTop: spacing.sm },
   confirmAmount: { color: colors.ink, fontSize: typography.display, fontWeight: fontWeights.bold, marginTop: spacing.xs },
   confirmNotes: { color: colors.ink, fontSize: 14, marginTop: spacing.xs },
-  confirmRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  confirmPrimary: { flex: 1 },
+  confirmRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.xl },
+  confirmButton: { flex: 1 },
 });

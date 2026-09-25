@@ -1,4 +1,4 @@
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 import { apiClient } from '../api/apiClient';
 import type { CartItem } from '../../types/pos';
 import type { CheckoutAccount, CheckoutCapabilities, CheckoutContext, CheckoutCurrency, CheckoutCustomer, CheckoutOperationalContext, CheckoutPaymentMethod, ClientSearchResponse, ClientSearchResult } from '../../types/mobilePosCheckout';
@@ -260,7 +260,7 @@ export function parseSalePreflightResponse(payload: unknown): SalePreflightRespo
 }
 
 function mapApiError(error: ApiError): MobilePosCheckoutError {
-  if (error.status === 401 || error.code === 'unauthenticated' || error.code === 'token_idle_timeout') return new MobilePosCheckoutError('session_expired', 'Session expired', { httpStatus: error.status, code: error.code });
+  if (isAuthInvalidError(error)) return new MobilePosCheckoutError('session_expired', 'Session expired', { httpStatus: error.status, code: error.code });
   if (error.status === 403) return new MobilePosCheckoutError('forbidden', 'Forbidden', { httpStatus: error.status, code: error.code });
   if (error.status === 409 && error.code === 'cash_register_not_open') return new MobilePosCheckoutError('invalid_request', 'Necesitas abrir caja antes de registrar una venta.', { httpStatus: error.status, code: error.code });
   if (error.status === 422) return new MobilePosCheckoutError('invalid_request', 'Invalid request', { httpStatus: error.status, code: error.code });

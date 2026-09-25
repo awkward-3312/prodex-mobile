@@ -3,7 +3,8 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensio
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FadeInView, PressableScale } from '../motion';
-import { colors, fontWeights, motion, radii, sizing, spacing, typography } from '../../theme';
+import { Button } from '../ui/Button';
+import { colors, fontWeights, motion, radii, spacing, typography } from '../../theme';
 import type { CartItem } from '../../types/pos';
 import { formatMinorUnits } from '../../utils/formatCurrency';
 import { CartItemRow } from './CartItemRow';
@@ -29,7 +30,7 @@ export function CartSheet({ visible, items, subtotalCents, discountCents, taxCen
             {hasItems ? items.map((item) => <CartItemRow key={item.product.id} item={item} onIncrease={() => onIncrease(item.product.id)} onDecrease={() => onDecrease(item.product.id)} onRemove={() => onRemove(item.product.id)} />) : <Text style={styles.empty}>Agrega productos para comenzar la venta.</Text>}
           </ScrollView>
           <View style={styles.totals}><View style={styles.totalLine}><Text style={styles.muted}>Subtotal estimado</Text><Text style={styles.lineValue}>{formatMinorUnits(subtotalCents)}</Text></View><View style={styles.totalLine}><Text style={styles.muted}>Descuento</Text><Text style={styles.lineValue}>{formatMinorUnits(discountCents)}</Text></View><View style={styles.totalLine}><Text style={styles.muted}>Impuestos</Text><Text style={styles.lineValue}>{taxCents > 0 ? formatMinorUnits(taxCents) : 'Pendiente'}</Text></View><View style={styles.grandLine}><Text style={styles.grandLabel}>Estimado</Text><Text style={styles.grandValue}>{formatMinorUnits(totalCents)}</Text></View></View>
-          <PressableScale accessibilityLabel="Cobrar venta" accessibilityRole="button" accessibilityState={{ disabled: !hasItems }} disabled={!hasItems} onPress={onCheckout} scaleTo={motion.pressScalePrimary} style={[styles.checkout, !hasItems && styles.disabled]}><Text style={styles.checkoutText}>Cobrar</Text></PressableScale>
+          <Button accessibilityLabel="Cobrar venta" label="Cobrar" disabled={!hasItems} onPress={onCheckout} style={styles.checkout} />
         </SafeAreaView>
         </FadeInView>
       </View>
@@ -39,7 +40,7 @@ export function CartSheet({ visible, items, subtotalCents, discountCents, taxCen
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(23, 50, 77, 0.38)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(10, 30, 54, 0.4)' },
   sheetWrap: { width: '100%' },
   sheet: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg, backgroundColor: colors.surface },
   handle: { alignSelf: 'center', width: 38, height: 4, marginBottom: spacing.md, borderRadius: radii.pill, backgroundColor: colors.line },
@@ -62,7 +63,5 @@ const styles = StyleSheet.create({
   grandLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.xs, paddingTop: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   grandLabel: { color: colors.ink, fontSize: 16, fontWeight: fontWeights.bold },
   grandValue: { color: colors.brandDark, fontSize: 20, fontWeight: fontWeights.heavy },
-  checkout: { minHeight: sizing.button, marginTop: spacing.md, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },
-  checkoutText: { color: colors.white, fontSize: 14, fontWeight: fontWeights.bold },
-  disabled: { opacity: 0.45 },
+  checkout: { marginTop: spacing.md },
 });

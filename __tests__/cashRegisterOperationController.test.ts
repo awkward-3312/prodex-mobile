@@ -22,7 +22,8 @@ function fixture(raw: string | null = null) {
   const storage = { read: jest.fn(async () => stored), write: jest.fn(async (value: string) => { stored = value; }), remove: jest.fn(async () => { stored = null; }) };
   const onSuccess = jest.fn(() => { successCount += 1; });
   const send = jest.fn(async (request: CashRegisterMovementRequest, _token: string) => success(request));
-  const deps = { owner: 'tenant|user', kind: 'movement-in', storage, send, onSuccess };
+  const isOnline = jest.fn(() => true);
+  const deps = { owner: 'tenant|user', kind: 'movement-in', storage, send, onSuccess, isOnline };
   return { controller: new CashRegisterOperationController<CashRegisterMovementRequest>(deps), deps, stored: () => stored, successCount: () => successCount };
 }
 
@@ -71,6 +72,39 @@ it('a 401 preserves the pending attempt and never auto-resubmits', async () => {
   expect(f.deps.send).toHaveBeenCalledTimes(1);
 });
 
+it('blocks a first submission while offline without sending, then succeeds once online', async () => {
+  const f = fixture(); await f.controller.restore();
+  f.deps.isOnline.mockReturnValue(false);
+  await f.controller.start(buildRequest, 'token');
+  expect(f.deps.send).not.toHaveBeenCalled();
+  expect(f.controller.getSnapshot().status).toBe('business_error');
+  expect(f.controller.getSnapshot().error?.code).toBe('offline');
+
+  f.deps.isOnline.mockReturnValue(true);
+  await f.controller.start(buildRequest, 'token');
+  expect(f.deps.send).toHaveBeenCalledTimes(1);
+  expect(f.controller.getSnapshot().status).toBe('success');
+});
+it('blocks a retry while offline (keeping the frozen attempt), then resends the SAME operation_uuid once reconnected', async () => {
+  const f = fixture(); await f.controller.restore();
+  f.deps.send.mockRejectedValueOnce(new CashRegisterOperationError('uncertain', 'network_error'));
+  await f.controller.start(buildRequest, 'token');
+  expect(f.controller.getSnapshot().status).toBe('uncertain');
+  const originalRequest = JSON.stringify(f.deps.send.mock.calls[0][0]);
+
+  f.deps.isOnline.mockReturnValue(false);
+  await f.controller.retry('renewed-token');
+  expect(f.deps.send).toHaveBeenCalledTimes(1);
+  expect(f.controller.getSnapshot().status).toBe('uncertain');
+  expect(f.controller.getSnapshot().error?.code).toBe('offline');
+  expect(JSON.stringify(f.controller.getSnapshot().attempt?.request)).toBe(originalRequest);
+
+  f.deps.isOnline.mockReturnValue(true);
+  await f.controller.retry('renewed-token');
+  expect(f.deps.send).toHaveBeenCalledTimes(2);
+  expect(JSON.stringify(f.deps.send.mock.calls[1][0])).toBe(originalRequest);
+  expect(f.controller.getSnapshot().status).toBe('success');
+});
 it.each(['register_already_open', 'register_closed', 'idempotency_conflict', 'validation_error', 'forbidden'])('a definitive %s clears the attempt and requires a corrected new attempt', async code => {
   const f = fixture(); await f.controller.restore();
   f.deps.send.mockRejectedValueOnce(new CashRegisterOperationError('business_error', code));

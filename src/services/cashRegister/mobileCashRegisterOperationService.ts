@@ -1,5 +1,5 @@
 import { apiClient } from '../api/apiClient';
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 import { isRecord, parseCashRegisterEntity, parseSummary } from './mobileCashRegisterService';
 import type { CashRegisterCurrent, CashRegisterSummary } from './mobileCashRegisterService';
 
@@ -44,6 +44,7 @@ export function cashRegisterOperationMessage(code: string): string {
     network_error: 'No pudimos conectar con PRODEX.',
     timeout: 'La solicitud tardó demasiado. Puedes reintentar de forma segura.',
     invalid_response: 'No pudimos confirmar la respuesta. Puedes reintentar de forma segura.',
+    offline: 'Sin conexión a internet. Conéctate y vuelve a intentarlo.',
   };
   return messages[code] ?? 'No pudimos confirmar la respuesta. Puedes reintentar de forma segura.';
 }
@@ -84,7 +85,7 @@ export function parseCashRegisterOperationResponse(payload: unknown, expectedUui
 }
 
 export function mapApiError(error: ApiError): CashRegisterOperationError {
-  if (error.status === 401 || error.code === 'token_idle_timeout') return new CashRegisterOperationError('session_expired', 'session_expired');
+  if (isAuthInvalidError(error)) return new CashRegisterOperationError('session_expired', 'session_expired');
   if (error.status === 404) return new CashRegisterOperationError('business_error', error.code ?? 'register_not_found');
   if (error.status === 403) return new CashRegisterOperationError('business_error', error.code ?? 'forbidden');
   if (error.status === 422) return new CashRegisterOperationError('business_error', error.code ?? 'validation_error');

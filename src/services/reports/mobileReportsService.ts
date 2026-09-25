@@ -1,4 +1,4 @@
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 import { apiClient } from '../api/apiClient';
 
 export type MobileReportsErrorStatus =
@@ -95,7 +95,7 @@ export function parseMobileReportsSummary(payload: unknown): MobileReportsSummar
 }
 
 function mapApiError(error: ApiError): MobileReportsError {
-  if (error.status === 401 || error.code === 'unauthenticated' || error.code === 'token_idle_timeout') {
+  if (isAuthInvalidError(error)) {
     return new MobileReportsError('session_expired', 'Session expired');
   }
   if (error.status === 403) return new MobileReportsError('forbidden', 'Forbidden');

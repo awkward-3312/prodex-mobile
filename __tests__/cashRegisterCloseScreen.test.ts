@@ -18,6 +18,11 @@ const mockSend = jest.fn();
 jest.mock('../src/services/cashRegister/mobileCashRegisterCloseService', () => ({ ...jest.requireActual('../src/services/cashRegister/mobileCashRegisterCloseService'), closeCashRegister: (...args: unknown[]) => mockSend(...args) }));
 import CloseScreen from '../app/cash-register/close';
 import { CashRegisterOperationError } from '../src/services/cashRegister/mobileCashRegisterOperationService';
+import { setActiveCurrency } from '../src/utils/formatCurrency';
+
+// AuthContext is mocked above, so its bootstrap->currency effect never runs;
+// set the tenant currency directly, matching this fixture's denominations.currencyCode.
+setActiveCurrency({ code: 'HNL', symbol: 'L', locale: 'es-HN', price_decimals: 2 });
 const success = { success: true, idempotent: true, operationUuid: '123e4567-e89b-42d3-a456-426614174000', operationType: 'close', registerId: 6, closedAt: '2026-09-13T12:00:00Z', expectedCash: '1020.00', countedCash: '1020.00', difference: '0.00' };
 function text(root: ReturnType<typeof create>) { return root.root.findAllByType(Text).map(node => Array.isArray(node.props.children) ? node.props.children.join('') : String(node.props.children)).join(' ').replace(/\u00a0/g, ' '); }
 function press(root: ReturnType<typeof create>, label: string) {

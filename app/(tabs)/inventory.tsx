@@ -7,6 +7,7 @@ import { CategoryChip } from '../../src/components/pos/CategoryChip';
 import { InventoryRow } from '../../src/components/inventory/InventoryRow';
 import { AppHeader } from '../../src/components/ui/AppHeader';
 import { EmptyState } from '../../src/components/ui/EmptyState';
+import { PermissionGuard } from '../../src/components/ui/PermissionGuard';
 import { SearchField } from '../../src/components/ui/SearchField';
 import { useAuth } from '../../src/context/AuthContext';
 import { getMobileInventory, mergeMobileInventoryPages, mobileInventoryItemKey, MobileInventoryError } from '../../src/services/inventory/mobileInventoryService';
@@ -44,6 +45,14 @@ function inventoryErrorMessage(error: MobileInventoryError) {
 }
 
 export default function InventoryScreen() {
+  return (
+    <PermissionGuard permission="Pos_view" title="No tienes permiso para ver el inventario.">
+      <InventoryScreenContent />
+    </PermissionGuard>
+  );
+}
+
+function InventoryScreenContent() {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');

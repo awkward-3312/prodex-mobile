@@ -15,8 +15,9 @@ function fixture(raw: string | null = null) {
   const storage = { read: jest.fn(async () => stored), write: jest.fn(async (value: string) => { stored = value; }), remove: jest.fn(async () => { stored = null; }) };
   const confirmed = jest.fn(() => { cart = []; });
   const send = jest.fn(async (request: SaleSubmissionRequest, _token: string) => success(request));
-  const deps = { owner: 'tenant|user', uuid, storage, confirmed, send };
-  return { controller: new SaleSubmissionController(deps), deps, cart: () => cart, stored: () => stored };
+  const isOnline = jest.fn(() => true);
+  const deps = { owner: 'tenant|user', uuid, storage, confirmed, send, isOnline };
+  return { controller: new SaleSubmissionController(deps), deps, cart: () => cart, stored: () => stored, isOnline };
 }
 it('persists a UUID v4 once before POST and clears only after confirmation', async () => {
   const f = fixture(); await f.controller.restore();
@@ -53,6 +54,45 @@ it('generates a new UUID only after successful sale is finished and a new checko
   expect(await f.controller.finish()).toBe(true); await f.controller.start(options);
   expect(f.deps.uuid).toHaveBeenCalledTimes(2);
   expect(f.deps.send.mock.calls[0][0].sale_uuid).not.toBe(f.deps.send.mock.calls[1][0].sale_uuid);
+});
+it('blocks a first submission while offline without burning a UUID or sending, then succeeds once online', async () => {
+  const f = fixture(); await f.controller.restore();
+  f.isOnline.mockReturnValue(false);
+  await f.controller.start(options);
+  expect(f.deps.send).not.toHaveBeenCalled();
+  expect(f.deps.uuid).not.toHaveBeenCalled();
+  expect(f.controller.getSnapshot().status).toBe('business_error');
+  expect(f.controller.getSnapshot().error?.code).toBe('offline');
+  expect(f.cart()).toHaveLength(1);
+
+  f.isOnline.mockReturnValue(true);
+  await f.controller.start(options);
+  expect(f.deps.send).toHaveBeenCalledTimes(1);
+  expect(f.deps.uuid).toHaveBeenCalledTimes(1);
+  expect(f.controller.getSnapshot().status).toBe('success');
+});
+it('blocks a retry while offline (keeping the frozen attempt), then resends the SAME uuid once reconnected without duplicating the sale', async () => {
+  const f = fixture(); await f.controller.restore();
+  f.deps.send.mockRejectedValueOnce(new SaleSubmissionError('uncertain', 'network_error'));
+  await f.controller.start(options);
+  expect(f.controller.getSnapshot().status).toBe('uncertain');
+  const originalRequest = JSON.stringify(f.deps.send.mock.calls[0][0]);
+
+  f.isOnline.mockReturnValue(false);
+  await f.controller.retry('renewed-token');
+  expect(f.deps.send).toHaveBeenCalledTimes(1);
+  expect(f.controller.getSnapshot().status).toBe('uncertain');
+  expect(f.controller.getSnapshot().error?.code).toBe('offline');
+  expect(JSON.stringify(f.controller.getSnapshot().attempt?.request)).toBe(originalRequest);
+  expect(f.cart()).toHaveLength(1);
+
+  f.isOnline.mockReturnValue(true);
+  await f.controller.retry('renewed-token');
+  expect(f.deps.send).toHaveBeenCalledTimes(2);
+  expect(JSON.stringify(f.deps.send.mock.calls[1][0])).toBe(originalRequest);
+  expect(f.deps.uuid).toHaveBeenCalledTimes(1);
+  expect(f.controller.getSnapshot().status).toBe('success');
+  expect(f.cart()).toEqual([]);
 });
 it.each(['insufficient_stock', 'validation_error', 'fiscal_error'])('definitive %s keeps cart and requires another preflight', async code => {
   const f = fixture(); await f.controller.restore(); f.deps.send.mockRejectedValueOnce(new SaleSubmissionError('business_error', code));

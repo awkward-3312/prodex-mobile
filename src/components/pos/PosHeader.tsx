@@ -1,31 +1,25 @@
 import { resolveOperationalContext } from '../../utils/resolveOperationalContext';
 import { UserAvatar } from '../ui/UserAvatar';
-import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { AppHeader } from '../ui/AppHeader';
+import { StyleSheet, Text } from 'react-native';
 
 import { useAuth } from '../../context/AuthContext';
-import { colors, fontWeights, spacing, typography } from '../../theme';
+import { colors, fontWeights, typography } from '../../theme';
 
+/** Same shell as AppHeader (title/subtitle + trailing), with the user
+ * avatar as the trailing control instead of a back/icon/action button. */
 export function PosHeader() {
   const { operationalContext } = useAuth();
   const context = resolveOperationalContext(operationalContext);
 
   return (
-    <View style={styles.header}>
-      <View style={styles.copy}>
-        <Text style={styles.title}>Punto de venta</Text>
-        <View style={styles.location}><Ionicons name="business-outline" size={14} color={colors.brand} /><Text style={styles.locationText} numberOfLines={1}>{context.label}</Text></View>
-        {context.readyForLocationPos === false ? <Text style={styles.locationText}>Contexto no listo para POS</Text> : null}
-      </View>
-      <UserAvatar />
-    </View>
+    <>
+      <AppHeader title="Punto de venta" subtitle={context.label} trailing={<UserAvatar />} />
+      {context.readyForLocationPos === false ? <Text style={styles.notReady}>Contexto no listo para POS</Text> : null}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 76, gap: spacing.md, paddingVertical: spacing.sm },
-  copy: { flex: 1, minWidth: 0 },
-  title: { color: colors.ink, fontSize: typography.title, lineHeight: 30, fontWeight: fontWeights.bold },
-  location: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },
-  locationText: { flexShrink: 1, color: colors.inkMuted, fontSize: typography.caption, lineHeight: 16, fontWeight: fontWeights.medium },
+  notReady: { marginTop: -4, marginBottom: 4, color: colors.inkMuted, fontSize: typography.caption, fontWeight: fontWeights.medium },
 });

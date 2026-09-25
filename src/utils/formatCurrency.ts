@@ -1,12 +1,33 @@
-import { appConfig } from '../config/app';
 import type { CheckoutCurrency } from '../types/mobilePosCheckout';
 
-type CurrencyConfig = typeof appConfig.currency;
+export type CurrencyConfig = CheckoutCurrency;
 
-export function formatCurrency(value: number, currency: CurrencyConfig = appConfig.currency) {
-  return new Intl.NumberFormat(currency.locale, {
+/**
+ * Used only before the tenant's authoritative currency has been resolved
+ * (the brief window before bootstrap/preferences load, or in a test that
+ * doesn't set one). Every screen that renders currency does so after
+ * AuthContext has already called setActiveCurrency with the real
+ * bootstrap-provided tenant currency, so this is not a per-tenant default —
+ * it never overrides real data and no tenant is assumed here.
+ */
+const PRE_BOOTSTRAP_FALLBACK_CURRENCY: CurrencyConfig = { code: 'USD', symbol: '$', locale: 'en-US', price_decimals: 2 };
+
+let activeCurrency: CurrencyConfig | null = null;
+
+/** Set by AuthContext once bootstrap/preferences resolve; cleared on sign-out. */
+export function setActiveCurrency(currency: CurrencyConfig | null) {
+  activeCurrency = currency;
+}
+
+function resolveCurrency(currency?: CurrencyConfig): CurrencyConfig {
+  return currency ?? activeCurrency ?? PRE_BOOTSTRAP_FALLBACK_CURRENCY;
+}
+
+export function formatCurrency(value: number, currency?: CurrencyConfig) {
+  const resolved = resolveCurrency(currency);
+  return new Intl.NumberFormat(resolved.locale ?? undefined, {
     style: 'currency',
-    currency: currency.code,
+    currency: resolved.code,
     currencyDisplay: 'symbol',
     maximumFractionDigits: 2,
   }).format(value);
@@ -50,18 +71,18 @@ export function parseMinorUnits(value: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? toMinorUnits(parsed) : 0;
 }
 
-export function formatMinorUnits(value: number, currency: CurrencyConfig = appConfig.currency) {
+export function formatMinorUnits(value: number, currency?: CurrencyConfig) {
   return formatCurrency(value / 100, currency);
 }
 
 export function formatCheckoutMinorUnits(value: number, currency?: CheckoutCurrency) {
-  if (!currency) return formatMinorUnits(value);
-  const decimals = Math.max(0, currency.price_decimals);
-  const amount = (Math.round(value) / 100).toLocaleString(currency.locale ?? appConfig.currency.locale, {
+  const resolved = resolveCurrency(currency);
+  const decimals = Math.max(0, resolved.price_decimals);
+  const amount = (Math.round(value) / 100).toLocaleString(resolved.locale ?? undefined, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
-  return `${currency.symbol} ${amount}`;
+  return `${resolved.symbol} ${amount}`;
 }
 
 export function calculateTaxMinorUnits(subtotalCents: number, rate: number) {

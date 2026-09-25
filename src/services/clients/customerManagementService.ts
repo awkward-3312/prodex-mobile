@@ -1,5 +1,5 @@
 import { apiClient } from '../api/apiClient';
-import { ApiError } from '../api/apiError';
+import { ApiError, isAuthInvalidError } from '../api/apiError';
 
 export const customerFields = ['name', 'firstname', 'lastname', 'phone', 'email', 'tax_number', 'country', 'state', 'city', 'zip', 'adresse'] as const;
 export type CustomerField = typeof customerFields[number];
@@ -45,7 +45,7 @@ async function mapped<T>(action: () => Promise<T>): Promise<T> {
   try { return await action(); } catch (error) {
     if (error instanceof CustomerWriteError) throw error;
     if (error instanceof ApiError) {
-      if (error.status === 401) throw new CustomerWriteError('session_expired', 'session_expired');
+      if (isAuthInvalidError(error)) throw new CustomerWriteError('session_expired', 'session_expired');
       const code = error.status === 403 ? 'forbidden' : error.status === 404 ? 'customer_not_found' : error.code ?? 'network_error';
       const fields: Partial<Record<CustomerField, string>> = {};
       if (code === 'validation_error' && error.details && typeof error.details === 'object') {

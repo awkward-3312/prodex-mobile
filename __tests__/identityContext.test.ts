@@ -9,6 +9,14 @@ let mockUser: AuthenticatedUser;
 let mockContext: OperationalContext | null;
 jest.mock('../src/context/AuthContext', () => ({ useAuth: () => ({ user: mockUser, operationalContext: mockContext, session: { baseUrl: 'https://tenant.example', accessToken: 'secret-access-token' } }) }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('../src/components/motion', () => {
+  const { Pressable, View } = jest.requireActual('react-native');
+  const React = jest.requireActual('react');
+  return {
+    PressableScale: ({ children, onPress, ...props }: any) => React.createElement(Pressable, { onPress, ...props }, children),
+    FadeInView: ({ children, style }: any) => React.createElement(View, { style }, children),
+  };
+});
 import { UserAvatar } from '../src/components/ui/UserAvatar';
 import { PosHeader } from '../src/components/pos/PosHeader';
 

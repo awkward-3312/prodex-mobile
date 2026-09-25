@@ -89,6 +89,11 @@ Node 22 is used locally.
 
 Do NOT downgrade Node.
 
+Entry point: package.json "main" is "expo-router/entry". There is no
+App.tsx / index.ts in this repo — expo-router owns the entry point via
+app/_layout.tsx. Do not recreate the default Expo template's App.tsx;
+it would be dead code that nothing loads.
+
 ---
 
 # 3. EXPO / JEST IMPORTANT CONFIGURATION
@@ -125,12 +130,16 @@ npx expo-doctor
 npx expo export --platform web
 git diff --check
 
-Expected current baseline:
+Expected current baseline (verify with the commands above; this repo has
+grown well past its early phases, so re-check rather than trusting old
+numbers):
 
-- 9 test suites
-- 136 tests
+- 38 test suites
+- ~450 tests
 - TypeScript passing
-- expo-doctor 21/21
+- expo-doctor 21/21 (2 of the 21 checks require outbound network to Expo's
+  registry/schema services; they cannot be verified in a network-restricted
+  sandbox and are not a sign of a real problem there)
 - web export passing
 
 Do not claim a task is finished if relevant validation fails.
@@ -173,46 +182,31 @@ When asked to commit:
 Main branch:
 main
 
-Important recent stable commits:
-
-9cbcb2113e9cdb95d1bf51d220b4f792c44ac6c0
-feat: connect and polish mobile POS checkout
-
-d533153d7b2802c390920763fdc69ea4fdd1b001
-chore: align Expo SDK 57 dependencies
+Do not trust hardcoded commit SHAs in this file as "current" — they age
+immediately. Always run `git log -5 --oneline` to see what is actually
+recent before assuming the state of the repo.
 
 ---
 
-# 6. CURRENT UNCOMMITTED UX / MOTION WORK
+# 6. UX / MOTION SYSTEM — IMPLEMENTED AND STABLE
 
-IMPORTANT:
+The UX/motion phase described in earlier versions of this document has been
+completed and committed. It is no longer "uncommitted work to preserve" —
+treat it as stable, shipped functionality like any other module.
 
-There may currently be uncommitted UX + motion changes.
+Motion touches (non-exhaustive, still grows as new screens are added):
 
-Do NOT overwrite them.
+- app/(tabs)/_layout.tsx, app/(tabs)/more.tsx, app/(tabs)/pos.tsx
+- app/login.tsx, app/pos/checkout.tsx, app/pos/scanner.tsx
+- app/cash-register/*, app/clients/*, app/reports/*, app/sales/*
+- src/components/pos/*, src/components/pos/payment/*
+- src/components/ui/*
 
-Always inspect git status and diff before modifying anything.
+Reusable motion components:
 
-The UX/motion phase introduced or modified:
-
-- app/(tabs)/_layout.tsx
-- app/(tabs)/more.tsx
-- app/(tabs)/pos.tsx
-- app/login.tsx
-- app/pos/checkout.tsx
-- app/pos/scanner.tsx
-- src/components/QuickAction.tsx
-- src/components/pos/*
-- src/components/pos/payment/*
-- src/components/ui/AppHeader.tsx
-- src/components/ui/EmptyState.tsx
-- src/theme/index.ts
-
-New reusable motion components:
-
-src/components/motion/FadeInView.tsx
-src/components/motion/PressableScale.tsx
-src/components/motion/index.ts
+- src/components/motion/FadeInView.tsx
+- src/components/motion/PressableScale.tsx
+- src/components/motion/index.ts
 
 Motion system includes:
 
@@ -227,6 +221,10 @@ Motion system includes:
 Do NOT redesign the application from scratch.
 
 The current visual direction has already been approved.
+
+As always: run `git status --short` before editing anything, since there
+may be new, unrelated uncommitted work in progress that this document does
+not know about yet.
 
 ---
 
@@ -304,7 +302,9 @@ Do not rely only on color to communicate status.
 
 # 9. CURRENT NAVIGATION
 
-Main tabs:
+Main tabs (Inventario is gated by the `Pos_view` permission, Ventas by
+`Sales_view` — hidden from the tab bar and blocked in-screen when the user
+lacks them; see §23/§24):
 
 - Inicio
 - POS
@@ -317,7 +317,11 @@ Other important screens:
 - Login
 - POS Scanner
 - POS Checkout
-- Client selector
+- Client selector / clients list / client detail / client create-edit
+  (app/clients/*)
+- Cash register open / close / history (app/cash-register/*)
+- Sales history + sale receipt (app/(tabs)/sales.tsx, app/sales/[id].tsx)
+- Reports (app/reports/index.tsx)
 - Cart sheet
 
 ---
@@ -503,23 +507,24 @@ It is NOT the identity of a product.
 
 # 16. CHECKOUT — CURRENT STATUS
 
-Mobile checkout is currently READ-ONLY with server preflight.
-
-It does NOT create a sale yet.
-
-This is intentional.
+Mobile checkout is LIVE. Phase 4C-2 (real sale submission) has already been
+implemented and is in production code — see §30 for its actual contract,
+which now documents what IS implemented rather than what to avoid.
 
 Endpoints integrated:
 
 GET /api/mobile/pos/checkout-context
 GET /api/mobile/pos/clients
 POST /api/mobile/pos/sale-preflight
-
-DO NOT call:
-
 POST /api/mobile/sales
 
-unless implementing the explicitly approved future phase 4C-2.
+Key files:
+
+- src/services/sales/mobileSaleSubmissionService.ts (request/response
+  contract, sale_uuid validation)
+- src/services/sales/saleSubmissionController.ts (submission state machine)
+- src/services/sales/saleAttemptStorage.ts (idempotent retry persistence)
+- app/pos/checkout.tsx
 
 Current checkout supports:
 
@@ -746,40 +751,46 @@ Never disable SAR merely to simplify a test.
 
 ---
 
-# 23. INVENTORY SCREEN
+# 23. INVENTORY SCREEN — IMPLEMENTED
 
-Inventory visual UI exists.
+Inventory is connected to the real backend endpoint:
 
-Runtime demo/mock inventory was intentionally removed.
+GET /api/mobile/inventory
 
-Until real inventory API integration is implemented:
+Key files: app/(tabs)/inventory.tsx,
+src/services/inventory/mobileInventoryService.ts.
 
-show EmptyState.
+Gated client-side by the `Pos_view` permission (same permission the backend
+policy checks for this endpoint — `SalePolicy::Sales_pos` ->
+`hasPermissionName('Pos_view')`) via
+src/components/ui/PermissionGuard.tsx and hidden from the tab bar in
+app/(tabs)/_layout.tsx when absent. The backend remains authoritative — the
+client gate only keeps the UI from offering a screen the API would reject.
 
-Do not show fake records as if they were real.
-
-Future target:
-connect real mobile inventory read endpoints.
+There is no mock/demo data path left in this screen or its service. Do not
+reintroduce one.
 
 Modern stock truth:
 inventory_location_stocks
 
 ---
 
-# 24. SALES SCREEN
+# 24. SALES SCREEN — IMPLEMENTED
 
-Sales visual UI exists.
+Sales history is connected to the real backend endpoint:
 
-Runtime fake sales were intentionally removed.
+GET /api/mobile/sales
 
-Until real sales history API integration is implemented:
+Key files: app/(tabs)/sales.tsx, app/sales/[id].tsx,
+src/services/sales/mobileSalesService.ts.
 
-show EmptyState.
+Gated client-side by the `Sales_view` permission (matches the backend
+`SalePolicy::view` ability) via src/components/ui/PermissionGuard.tsx and
+hidden from the tab bar in app/(tabs)/_layout.tsx when absent. The backend
+remains authoritative.
 
-Do not display fake customers or fake sales as real data.
-
-Future target:
-connect real sales history API.
+There is no mock/demo data path left in this screen or its service. Do not
+reintroduce one.
 
 ---
 
@@ -803,6 +814,12 @@ Important reusable pieces include:
 - EmptyState
 - PressableScale
 - FadeInView
+- PermissionGuard (src/components/ui/PermissionGuard.tsx) — client-side
+  permission gate; wraps a screen and renders EmptyState when the current
+  user lacks the given permission
+- ErrorBoundary (src/components/ErrorBoundary.tsx) — root-level render
+  error boundary mounted in app/_layout.tsx; last resort against a
+  crash-to-blank-screen, not a substitute for per-screen error states
 
 Theme contains concepts for:
 
@@ -921,64 +938,94 @@ mobile fiscal totals contract hardening
 4C-1:
 mobile checkout context + customers + server preflight
 
+4C-2:
+real sale submission (POST /api/mobile/sales), sale_uuid idempotency,
+uncertain-retry handling — see §30 for the current contract
+
+Post-4C-2 (undocumented as phases in earlier versions of this file, but
+implemented and tested):
+
+- real Inventory screen (GET /api/mobile/inventory)
+- real Sales history + sale receipt screens
+- Reports screen (backend sales/fiscal reporting)
+- Cash register: open / close / movements / history, durable
+  fail-closed guard around POS
+- Customer management: create, edit, quick-create from POS checkout
+
 Visual polish:
 completed
 
 UX / motion:
-currently undergoing final physical QA
+completed and committed (see §6)
 
 ---
 
-# 30. FUTURE PHASE 4C-2 — DO NOT IMPLEMENT WITHOUT APPROVAL
+# 30. PHASE 4C-2 — REAL SALE SUBMISSION — IMPLEMENTED
 
-Future 4C-2 will create real sales using:
+4C-2 is implemented. POST /api/mobile/sales is called from mobile checkout.
+This section now documents the contract actually in code, not a future
+proposal — treat any change to this contract as a change to production
+financial logic, not routine cleanup.
 
-POST /api/mobile/sales
+Implementation:
 
-Do not start automatically.
+- src/services/sales/mobileSaleSubmissionService.ts —
+  `buildSaleSubmissionRequest` whitelists intent fields, validates
+  sale_uuid as UUID v4, validates quantity/amount shapes;
+  `parseSaleSubmissionResponse` validates the response shape strictly.
+- src/services/sales/saleSubmissionController.ts — orchestrates submit /
+  uncertain / retry / success state.
+- src/services/sales/saleAttemptStorage.ts — persists the in-flight
+  attempt (including its sale_uuid) so an uncertain outcome can be
+  recovered and retried with the SAME sale_uuid after an app restart.
 
-When explicitly approved, required semantics include:
+Semantics that must be preserved:
 
-sale_uuid UUID v4 generated ONCE per logical checkout attempt.
+sale_uuid is a UUID v4 generated ONCE per logical checkout attempt.
 
-If submission result is uncertain due to:
+If the submission result is uncertain due to:
 
 - timeout
 - network failure
 - connection loss
+- an ambiguous/5xx response
 
-retry using the SAME sale_uuid.
+retry using the SAME sale_uuid. Never generate a new UUID for an uncertain
+retry — this is what makes the backend idempotency guarantee (sale_uuid
+idempotency, §31) actually safe to rely on.
 
-Never generate a new UUID for an uncertain retry.
-
-Required payload concept:
+Payload sent (see `buildSaleSubmissionRequest`):
 
 {
   "sale_uuid": "...",
   "client_id": ...,
-  "lines": [...],
-  "payments": [...],
-  "notes": "..."
+  "lines": [{ "product_id": ..., "product_variant_id": ..., "quantity": "..." }],
+  "payments": [{ "payment_method_id": ..., "amount": "...", "account_id": ... }]
 }
 
-Never send server-authoritative financial calculations.
+Never send server-authoritative financial calculations (price, tax,
+subtotal, grand total) in this payload.
 
-Cart must clear ONLY after confirmed successful sale response.
+Cart must clear ONLY after a confirmed successful sale response.
 
 After success:
 
 - refresh catalog/stock
 - refresh sales
-- handle idempotent response
-- show real sale reference
-- show fiscal data if present
+- handle idempotent response (`data.idempotent === true`)
+- show real sale reference (`sale.ref`)
+- show fiscal data if present (`sale.fiscal_number`, `sale.fiscal_status`)
 
-Block unsupported:
+Blocked / unsupported (rejected before or by the backend, not silently
+allowed):
 
 - Stripe sensitive card data
 - serial-required products without serial UI
 - batch-required products without batch UI
 - unsupported combos/packs
+
+See §22 for the fiscal-numbering warning on the prueba02 tenant — it still
+applies now that real submission exists.
 
 ---
 
@@ -1151,26 +1198,24 @@ When a task is complete, report:
 
 # 38. CURRENT PRIORITY
 
-Current priority is NOT adding more complex backend functionality yet.
+UX/motion is frozen (§6). Inventory, Sales, Reports, Cash register,
+Customer management, and real sale submission (4C-2) are all implemented
+(§29/§30) — do not treat them as pending or re-implement them.
 
-Immediate priority:
+Immediate priority is production-readiness hardening, not new business
+features. Known open items as of the last audit:
 
-1. finish physical UX/motion QA
-2. fix only UX/motion issues found
-3. validate
-4. commit UX/motion separately when approved
+1. store identity: ios.bundleIdentifier, android.package, eas.json,
+   EAS projectId are not yet configured (do NOT set these up without
+   explicit approval — see §35's spirit; EAS config is a deliberate,
+   separate step)
+2. serial/batch workflows (still blocked, §32)
+3. broader offline handling (no proactive connectivity detection beyond
+   reacting to failed requests)
+4. reducing duplicated 401/session-expired mapping across services
 
-After UX/motion is frozen, likely roadmap:
-
-1. real Inventory screen
-2. real Sales/history screen
-3. 4C-2 real sale submission
-4. post-sale stock/history refresh
-5. cash/session improvements
-6. serial/batch workflows
-7. production store preparation
-
-Do not automatically skip ahead.
+Do not automatically skip ahead. Confirm scope before starting any of the
+above.
 
 ---
 
