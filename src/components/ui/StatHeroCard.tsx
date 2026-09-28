@@ -41,8 +41,8 @@ export function StatHeroCard({ title, value, subtitle, icon, variant = 'soft', s
 
 const styles = StyleSheet.create({
   base: { borderRadius: radii.lg, padding: spacing.lg },
-  soft: { backgroundColor: colors.brandSoft },
-  dark: { backgroundColor: colors.brand, ...shadows.elevated },
+  soft: { backgroundColor: colors.accentSoft, borderTopWidth: 3, borderTopColor: colors.accent },
+  dark: { backgroundColor: colors.navyDark, borderTopWidth: 3, borderTopColor: colors.accent, ...shadows.elevated },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: typography.caption, fontWeight: fontWeights.semibold },
   titleSoft: { color: colors.brandDark },

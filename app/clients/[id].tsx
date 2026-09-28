@@ -63,11 +63,12 @@ export default function ClientDetailScreen() {
   const goBack = () => router.back();
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <AppHeader title="Cliente" onBack={goBack} />
         {hasPermission?.('Customers_edit') && client ? (
           <PressableScale
+            accessibilityLabel="Editar cliente"
             accessibilityRole="button"
             onPress={() => router.push({ pathname: '/clients/manage', params: { clientId: String(client.id) } })}
             style={styles.editButton}
@@ -139,7 +140,7 @@ const styles = StyleSheet.create({
   editButtonText: { color: colors.brandDark, fontSize: 13, fontWeight: fontWeights.bold },
   card: { ...surfaces.card, padding: spacing.lg, marginTop: spacing.md },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
-  avatar: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
+  avatar: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
   name: { flex: 1, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   infoCopy: { flex: 1, minWidth: 0 },

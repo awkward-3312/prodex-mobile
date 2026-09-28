@@ -22,7 +22,7 @@ export function PosSearchBar({ value, onChangeText, onScanPress }: Props) {
         style={styles.searchBox}
       />
       <PressableScale accessibilityLabel="Escanear código de barras" accessibilityRole="button" onPress={onScanPress} style={styles.scan}>
-        <Ionicons name="scan-outline" size={23} color={colors.brand} />
+        <Ionicons name="scan-outline" size={23} color={colors.onAccent} />
       </PressableScale>
     </View>
   );
@@ -31,5 +31,5 @@ export function PosSearchBar({ value, onChangeText, onScanPress }: Props) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   searchBox: { flex: 1 },
-  scan: { width: sizing.input, height: sizing.input, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft, borderWidth: 1, borderColor: colors.brandSoft },
+  scan: { width: sizing.input, height: sizing.input, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accentDark },
 });

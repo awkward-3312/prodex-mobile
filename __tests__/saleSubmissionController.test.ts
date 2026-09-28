@@ -175,3 +175,18 @@ it('double retry and reset cannot duplicate or abandon a pending sale', async ()
   await Promise.all([f.controller.retry('token'), f.controller.retry('token')]);
   expect(f.deps.send).toHaveBeenCalledTimes(2); expect(f.deps.uuid).toHaveBeenCalledTimes(1);
 });
+
+it('releases only a definitive rejection for revalidation and cannot unlock an uncertain sale', async () => {
+  const f = fixture(); await f.controller.restore();
+  f.deps.send.mockRejectedValueOnce(new SaleSubmissionError('business_error', 'fiscal_error'));
+  await f.controller.start(options);
+  f.controller.clearBusinessError();
+  expect(f.controller.getSnapshot()).toMatchObject({ status: 'idle', error: null });
+  f.deps.send.mockRejectedValueOnce(new SaleSubmissionError('uncertain', 'timeout'));
+  await f.controller.start(options);
+  const pending = f.controller.getSnapshot();
+  f.controller.clearBusinessError();
+  expect(f.controller.getSnapshot()).toBe(pending);
+  expect(f.controller.isLocked()).toBe(true);
+  expect(f.cart()).toHaveLength(1);
+});

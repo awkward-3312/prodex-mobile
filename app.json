@@ -16,13 +16,19 @@
       "package": "cloud.prodexhub.mobile",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#0F2A4A",
-        "foregroundImage": "./assets/android-icon-foreground.png"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/prodex-symbol.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
       "expo-router",
@@ -37,10 +43,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
+          "image": "./assets/prodex-symbol.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#0F2A4A"
+          "backgroundColor": "#FFFFFF"
         }
       ]
     ],
@@ -48,6 +54,12 @@
       "eas": {
         "projectId": "5fb15704-786f-41df-8571-6b5a4ab3007a"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5fb15704-786f-41df-8571-6b5a4ab3007a"
     }
   }
 }

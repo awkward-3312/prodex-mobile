@@ -5,7 +5,7 @@ import { Text, TextInput } from 'react-native';
 let mockAllowed = true;
 const mockSignOut = jest.fn();
 const mockSubmit = jest.fn();
-const mockCart = { items: [{ product: { id: '1', productId: 1, name: 'Arroz', price: 10, stock: 10 }, quantity: 2, unitPriceCents: 1000 }], itemCount: 2, subtotalCents: 2000, discountCents: 0, totalCents: 2000, cartLocked: false, submission: { status: 'idle' }, saleSubmission: { start: mockSubmit, isLocked: () => false } };
+const mockCart = { items: [{ product: { id: '1', productId: 1, name: 'Arroz', price: 10, stock: 10 }, quantity: 2, unitPriceCents: 1000 }], itemCount: 2, subtotalCents: 2000, discountCents: 0, totalCents: 2000, cartLocked: false, submission: { status: 'idle' }, saleSubmission: { clearBusinessError: jest.fn(), start: mockSubmit, isLocked: () => false } };
 jest.mock('../src/context/PosCartContext', () => ({ usePosCart: () => mockCart }));
 jest.mock('../src/context/CashRegisterContext', () => ({ useCashRegister: () => ({ invalidate: jest.fn() }) }));
 jest.mock('../src/components/pos/PosRegisterGuard', () => ({ PosRegisterGuard: ({ children }: any) => children }));
@@ -16,6 +16,10 @@ jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }
 jest.mock('../src/components/motion', () => {
   const React = jest.requireActual('react'); const { View, Pressable } = jest.requireActual('react-native');
   return { FadeInView: (props: any) => React.createElement(View, props), PressableScale: (props: any) => React.createElement(Pressable, props) };
+});
+jest.mock('../src/components/ui/MotionSheet', () => {
+  const React = jest.requireActual('react'); const { View } = jest.requireActual('react-native');
+  return { MotionSheet: ({ visible, children, ...props }: any) => visible ? React.createElement(View, props, children) : null };
 });
 jest.mock('../src/components/clients/CustomerEditor', () => ({ CustomerEditor: () => null }));
 const mockContext = { operational_context: { branch: null, inventory_location: null, cash_drawer: null }, customer: { default: { id: 1, name: 'Cliente Final' } }, payment_methods: [{ id: 1, name: 'Efectivo', type: 'cash', is_cash: true, is_card: false, is_supported: true, is_available: true, supports_change: true, requires_account: false }], accounts: [], currency: { code: 'HNL', symbol: 'L', price_decimals: 2 }, capabilities: { can_create_sale: true, mixed_payments: false }, tax_config: {}, pricing: {} };

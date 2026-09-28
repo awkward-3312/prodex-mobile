@@ -1,9 +1,10 @@
 import { randomUUID } from 'expo-crypto';
 import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '../ui/Button';
+import { MotionSheet } from '../ui/MotionSheet';
 import { useAuth } from '../../context/AuthContext';
 import { CashRegisterOperationController } from '../../services/cashRegister/cashRegisterOperationController';
 import { cashRegisterAttemptStorage } from '../../services/cashRegister/cashRegisterAttemptStorage';
@@ -35,6 +36,7 @@ export function CashMovementModal({
   const [notes, setNotes] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const uuidRef = useRef<string | null>(null);
+  const titleRef = useRef<View | null>(null);
 
   const controllers = useRef(new Map<string, CashRegisterOperationController<CashRegisterMovementRequest>>());
   const kind = `movement-${type}`;
@@ -55,11 +57,12 @@ export function CashMovementModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [owner, kind, session?.baseUrl]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
+  const dismissible = !controller.isLocked();
 
   const title = type === 'in' ? 'Entrada de efectivo' : 'Salida de efectivo';
   const icon = type === 'in' ? 'arrow-down-circle-outline' : 'arrow-up-circle-outline';
-  const accent = type === 'in' ? colors.brand : colors.amber;
-  const accentSoft = type === 'in' ? colors.brandSoft : colors.amberSoft;
+  const accent = type === 'in' ? colors.accentDark : colors.amber;
+  const accentSoft = type === 'in' ? colors.accentSoft : colors.amberSoft;
 
   const reset = () => {
     setStep('form');
@@ -70,7 +73,7 @@ export function CashMovementModal({
   };
 
   const handleClose = () => {
-    if (state.status === 'submitting') return;
+    if (!dismissible) return;
     reset();
     onClose();
   };
@@ -124,24 +127,32 @@ export function CashMovementModal({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
+    <MotionSheet
+      visible={visible}
+      onClose={handleClose}
+      dismissible={dismissible}
+      accessibilityLabel={title}
+      closeAccessibilityLabel="Cerrar movimiento de caja"
+      showCloseButton
+      keyboardAvoiding
+      maxHeightPct={0.92}
+      initialFocusRef={titleRef}
+      contentStyle={styles.sheet}
+    >
+      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <View style={styles.headerRow}>
             <View style={[styles.iconBadge, { backgroundColor: accentSoft }]}>
               <Ionicons name={icon} size={22} color={accent} />
             </View>
-            <Text accessibilityRole="header" style={styles.title}>{title}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Cerrar" onPress={handleClose} hitSlop={12} disabled={submitting}>
-              <Ionicons name="close" size={22} color={colors.inkMuted} />
-            </Pressable>
+            <View ref={titleRef} accessible accessibilityRole="header" style={styles.title}><Text style={styles.titleText}>{title}</Text></View>
           </View>
 
           {step === 'form' ? (
             <View>
               <Text style={styles.label}>Monto</Text>
               <TextInput
+                selectionColor={colors.accent}
+                cursorColor={colors.accentDark}
                 accessibilityLabel="Monto"
                 accessibilityRole="none"
                 style={styles.input}
@@ -153,6 +164,8 @@ export function CashMovementModal({
               />
               <Text style={styles.label}>Motivo</Text>
               <TextInput
+                selectionColor={colors.accent}
+                cursorColor={colors.accentDark}
                 accessibilityLabel="Motivo"
                 accessibilityRole="none"
                 style={[styles.input, styles.notesInput]}
@@ -196,19 +209,18 @@ export function CashMovementModal({
               )}
             </View>
           )}
-        </View>
-      </View>
-    </Modal>
+      </ScrollView>
+    </MotionSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(10, 30, 54, 0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg, padding: spacing.xl, paddingBottom: spacing.xxl },
-  handle: { alignSelf: 'center', width: 38, height: 4, marginBottom: spacing.md, borderRadius: radii.pill, backgroundColor: colors.line },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
+  sheet: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl },
+  content: { paddingBottom: spacing.sm },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg, paddingRight: 44 },
   iconBadge: { width: 36, height: 36, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
-  title: { flex: 1, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
+  title: { flex: 1 },
+  titleText: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
   label: { color: colors.inkMuted, fontSize: typography.caption, fontWeight: fontWeights.semibold, marginTop: spacing.md },
   input: { ...surfaces.card, marginTop: spacing.xs, padding: spacing.md, color: colors.ink, fontSize: 16 },
   notesInput: { minHeight: 72, textAlignVertical: 'top' },

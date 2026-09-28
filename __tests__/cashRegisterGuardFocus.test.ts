@@ -13,6 +13,11 @@ jest.mock('../src/components/motion', () => {
   const { View, Pressable } = jest.requireActual('react-native');
   return { FadeInView: View, PressableScale: Pressable };
 });
+jest.mock('../src/components/ui/MotionSheet', () => {
+  const React = jest.requireActual('react');
+  const { View } = jest.requireActual('react-native');
+  return { MotionSheet: ({ visible, children, ...props }: any) => visible ? React.createElement(View, props, children) : null };
+});
 const mockSignOut = jest.fn();
 let mockPermissions = ['Pos_view', 'cash_register_report'];
 jest.mock('../src/context/AuthContext', () => ({ useAuth: () => ({ session: { baseUrl: 'https://tenant.test', accessToken: 'token' }, user: { id: 3 }, hasPermission: (p: string) => mockPermissions.includes(p), signOut: mockSignOut }) }));

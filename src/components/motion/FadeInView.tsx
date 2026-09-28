@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import type { StyleProp, ViewProps, ViewStyle } from 'react-native';
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { motion } from '../../theme';
+import { prodexEasing } from './easing';
+import { useProdexMotion } from './useProdexMotion';
 
-type Props = {
+type Props = Omit<ViewProps, 'children' | 'style'> & {
   children: ReactNode;
   delay?: number;
   distance?: number;
@@ -13,24 +15,36 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function FadeInView({ children, delay = 0, distance = 8, duration = motion.duration.normal, style }: Props) {
-  const reducedMotion = useReducedMotion();
-  const opacity = useSharedValue(reducedMotion ? 1 : 0);
-  const translateY = useSharedValue(reducedMotion ? 0 : distance);
+export function FadeInView({ children, delay = 0, distance = motion.distance.content, duration = motion.duration.content, style, ...viewProps }: Props) {
+  const { reducedMotion, durations, distances } = useProdexMotion();
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(reducedMotion ? distances.content : distance);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      opacity.value = withTiming(1, { duration: reducedMotion ? motion.duration.fast : duration });
-      translateY.value = withTiming(0, { duration: reducedMotion ? motion.duration.fast : duration });
-    }, reducedMotion ? 0 : delay);
+    let active = true;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const effectiveDuration = reducedMotion ? durations.touch : duration;
+    const start = () => {
+      if (!active) return;
+      opacity.value = withTiming(1, { duration: effectiveDuration, easing: prodexEasing.enter });
+      translateY.value = withTiming(0, { duration: effectiveDuration, easing: prodexEasing.enter });
+    };
 
-    return () => clearTimeout(timeout);
-  }, [delay, duration, opacity, reducedMotion, translateY]);
+    if (!reducedMotion && delay > 0) timeout = setTimeout(start, delay);
+    else start();
+
+    return () => {
+      active = false;
+      if (timeout !== undefined) clearTimeout(timeout);
+      cancelAnimation(opacity);
+      cancelAnimation(translateY);
+    };
+  }, [delay, duration, durations.touch, opacity, reducedMotion, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateY: translateY.value }],
   }));
 
-  return <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>;
+  return <Animated.View {...viewProps} style={[style, animatedStyle]}>{children}</Animated.View>;
 }

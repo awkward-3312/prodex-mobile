@@ -180,7 +180,7 @@ export default function ClientsScreen() {
         keyboardShouldPersistTaps="handled"
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.35}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accentDark} colors={[colors.accentDark]} />}
       />
       {loadingSearch && !loadingInitial ? <View style={styles.searchSpinner}><ActivityIndicator size="small" color={colors.brand} /></View> : null}
     </SafeAreaView>

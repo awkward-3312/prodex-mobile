@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   row: { minHeight: 68, justifyContent: 'center', padding: spacing.md, marginBottom: spacing.sm, borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   rowInner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   main: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md, minWidth: 0 },
-  avatar: { width: 38, height: 38, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
+  avatar: { width: 38, height: 38, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
   copy: { flex: 1, minWidth: 0 },
   name: { color: colors.ink, fontSize: typography.body, fontWeight: fontWeights.semibold },
   meta: { marginTop: 2, color: colors.inkMuted, fontSize: 12 },

@@ -88,7 +88,7 @@ export default function OpenCashRegisterScreen() {
   const alreadyOpen = businessError && state.error?.code === 'register_already_open';
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <AppHeader title="Abrir caja" onBack={() => router.back()} />
       </View>
@@ -100,7 +100,7 @@ export default function OpenCashRegisterScreen() {
         {step === 'form' ? (
           <View>
             <Text style={styles.label}>Saldo inicial</Text>
-            <TextInput
+            <TextInput selectionColor={colors.accent} cursorColor={colors.accentDark}
               accessibilityLabel="Saldo inicial"
               style={styles.input}
               keyboardType="decimal-pad"
@@ -110,7 +110,7 @@ export default function OpenCashRegisterScreen() {
               onChangeText={setOpeningBalance}
             />
             <Text style={styles.label}>Notas (opcional)</Text>
-            <TextInput
+            <TextInput selectionColor={colors.accent} cursorColor={colors.accentDark}
               accessibilityLabel="Notas"
               style={[styles.input, styles.notesInput]}
               placeholder="Observaciones de apertura"

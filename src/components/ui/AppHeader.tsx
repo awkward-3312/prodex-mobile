@@ -34,7 +34,7 @@ export function AppHeader({ title, subtitle, icon, onBack, action, trailing }: P
           <Ionicons name="arrow-back" size={21} color={colors.ink} />
         </PressableScale>
       ) : icon ? (
-        <View style={styles.iconBadge}><Ionicons name={icon} size={20} color={colors.brand} /></View>
+        <View style={styles.iconBadge}><Ionicons name={icon} size={20} color={colors.onAccent} /></View>
       ) : null}
       <View style={styles.copy}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   copy: { flex: 1, minWidth: 0 },
   title: { color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold, lineHeight: 30 },
   subtitle: { marginTop: 2, color: colors.inkMuted, fontSize: typography.caption, fontWeight: fontWeights.medium, lineHeight: 16 },
-  iconButton: { width: sizing.iconButton, height: sizing.iconButton, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
-  iconBadge: { width: sizing.iconButton, height: sizing.iconButton, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  iconButton: { width: sizing.iconButton, height: sizing.iconButton, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.line },
+  iconBadge: { width: sizing.iconButton, height: sizing.iconButton, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent },
   warning: { backgroundColor: colors.amberSoft, borderColor: colors.amberSoft },
 });

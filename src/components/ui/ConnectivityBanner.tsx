@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { AccessibilityInfo, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useConnectivity } from '../../services/connectivity/connectivityController';
@@ -15,11 +16,20 @@ import { FadeInView } from '../motion';
 export function ConnectivityBanner() {
   const { status } = useConnectivity();
   const insets = useSafeAreaInsets();
+  const previousStatus = useRef(status);
+
+  useEffect(() => {
+    if (status === 'online' && previousStatus.current !== 'online') {
+      AccessibilityInfo.announceForAccessibility?.('Conexión restablecida');
+    }
+    previousStatus.current = status;
+  }, [status]);
+
   if (status === 'online') return null;
 
   const isOffline = status === 'offline';
   return (
-    <FadeInView distance={0} style={[styles.wrap, { paddingTop: insets.top + spacing.xs }, isOffline ? styles.offline : styles.reconnecting]}>
+    <FadeInView accessibilityLiveRegion="polite" distance={0} style={[styles.wrap, { paddingTop: insets.top + spacing.xs }, isOffline ? styles.offline : styles.reconnecting]}>
       <Ionicons name={isOffline ? 'cloud-offline-outline' : 'sync-outline'} size={14} color={colors.white} />
       <Text style={styles.text}>{isOffline ? 'Sin conexión a internet' : 'Reconectando...'}</Text>
     </FadeInView>

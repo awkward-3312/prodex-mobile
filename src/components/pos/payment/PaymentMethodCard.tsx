@@ -9,10 +9,10 @@ type PaymentOption = CheckoutPaymentMethod | { id: 'mixed'; name: string; type: 
 type Props = { method: PaymentOption; selected: boolean; onPress: () => void };
 
 function methodStyle(method: PaymentOption): { icon: keyof typeof Ionicons.glyphMap; color: string; background: string } {
-  if (method.id === 'mixed') return { icon: 'git-compare-outline', color: colors.purple, background: colors.purpleSoft };
-  if (method.is_cash) return { icon: 'cash-outline', color: colors.brand, background: colors.brandSoft };
-  if (method.is_card) return { icon: 'card-outline', color: colors.blue, background: colors.blueSoft };
-  return { icon: 'swap-horizontal-outline', color: colors.teal, background: colors.tealSoft };
+  if (method.id === 'mixed') return { icon: 'git-compare-outline', color: colors.accentDark, background: colors.accentSoft };
+  if (method.is_cash) return { icon: 'cash-outline', color: colors.accentDark, background: colors.accentSoft };
+  if (method.is_card) return { icon: 'card-outline', color: colors.accentDark, background: colors.accentSoft };
+  return { icon: 'swap-horizontal-outline', color: colors.accentDark, background: colors.accentSoft };
 }
 
 export function displayPaymentMethodName(method: PaymentOption) {

@@ -5,7 +5,7 @@ import type { SubmissionState } from '../services/sales/saleSubmissionController
 import { saleAttemptStorage } from '../services/sales/saleAttemptStorage';
 import { submitMobileSale } from '../services/sales/mobileSaleSubmissionService';
 import { isOnline } from '../services/connectivity/connectivityController';
-import { createContext, useContext, useReducer, useMemo, useRef, useEffect, useState, useSyncExternalStore } from 'react';
+import { createContext, useCallback, useContext, useReducer, useMemo, useRef, useEffect, useState, useSyncExternalStore } from 'react';
 
 import type { CartItem, PosProduct } from '../types/pos';
 import { toMinorUnits } from '../utils/formatCurrency';
@@ -117,11 +117,11 @@ export function PosCartProvider({ children }: { children: React.ReactNode }) {
     }
     void saleSubmission.restore();
   }, [owner, saleSubmission]);
-  const guardedDispatch = (action: CartAction) => {
+  const guardedDispatch = useCallback((action: CartAction) => {
     if (!owner || saleSubmission.isLocked()) return;
     if (action.type === 'clear') saleSubmission.resetDraft();
     dispatch(action);
-  };
+  }, [owner, saleSubmission]);
   const visibleItems = cartOwner.current === owner ? state.items : carts.current.get(owner) ?? [];
   useEffect(() => {
     if (visibleItems.length === 0) saleSubmission.resetDraft();
@@ -130,20 +130,28 @@ export function PosCartProvider({ children }: { children: React.ReactNode }) {
   const discountCents = 0;
   const taxCents = 0;
 
-  const value: PosCartValue = {
+  const addProduct = useCallback((product: PosProduct, quantity = 1) => guardedDispatch({ type: 'add', product, quantity }), [guardedDispatch]);
+  const increase = useCallback((productId: string) => guardedDispatch({ type: 'increase', productId }), [guardedDispatch]);
+  const decrease = useCallback((productId: string) => guardedDispatch({ type: 'decrease', productId }), [guardedDispatch]);
+  const remove = useCallback((productId: string) => guardedDispatch({ type: 'remove', productId }), [guardedDispatch]);
+  const clearCart = useCallback(() => guardedDispatch({ type: 'clear' }), [guardedDispatch]);
+  const itemCount = getCartItemCount(visibleItems);
+  const totalCents = subtotalCents - discountCents;
+
+  const value = useMemo<PosCartValue>(() => ({
     saleSubmission, submission, cartLocked: !owner || saleSubmission.isLocked(), salesRevision,
     items: visibleItems,
-    itemCount: getCartItemCount(visibleItems),
+    itemCount,
     subtotalCents,
     discountCents,
     taxCents,
-    totalCents: subtotalCents - discountCents,
-    addProduct: (product, quantity = 1) => guardedDispatch({ type: 'add', product, quantity }),
-    increase: (productId) => guardedDispatch({ type: 'increase', productId }),
-    decrease: (productId) => guardedDispatch({ type: 'decrease', productId }),
-    remove: (productId) => guardedDispatch({ type: 'remove', productId }),
-    clearCart: () => guardedDispatch({ type: 'clear' }),
-  };
+    totalCents,
+    addProduct,
+    increase,
+    decrease,
+    remove,
+    clearCart,
+  }), [addProduct, clearCart, decrease, discountCents, increase, itemCount, owner, remove, saleSubmission, salesRevision, submission, subtotalCents, taxCents, totalCents, visibleItems]);
 
   return <PosCartContext.Provider value={value}>{children}</PosCartContext.Provider>;
 }

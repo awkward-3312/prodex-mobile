@@ -27,7 +27,7 @@ export function EmptyState({ icon, title, message, actionLabel, onAction, compac
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', paddingHorizontal: spacing.xl, paddingVertical: spacing.xxl },
   compact: { paddingVertical: spacing.xl },
-  icon: { width: 76, height: 76, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft, borderWidth: 5, borderColor: colors.surface },
+  icon: { width: 76, height: 76, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent, borderWidth: 5, borderColor: colors.surface },
   title: { marginTop: spacing.md, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold, textAlign: 'center' },
   message: { maxWidth: 300, marginTop: spacing.xs, color: colors.inkMuted, fontSize: typography.caption, lineHeight: 18, textAlign: 'center' },
   action: { minHeight: sizing.touch, marginTop: spacing.md, paddingHorizontal: spacing.lg, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand },

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FadeInView } from '../../src/components/motion';
 import { CategoryChip } from '../../src/components/pos/CategoryChip';
@@ -53,7 +53,6 @@ export default function InventoryScreen() {
 }
 
 function InventoryScreenContent() {
-  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [categoryId, setCategoryId] = useState<SelectedCategory>(null);
@@ -207,7 +206,7 @@ function InventoryScreenContent() {
 
   const renderHeader = () => (
     <FadeInView distance={6}>
-      <AppHeader title="Inventario" subtitle={locationLabel} />
+      <AppHeader icon="cube-outline" title="Inventario" subtitle={locationLabel} />
 
       <View style={styles.summaryCard}>
         <View style={styles.summaryColumn}>
@@ -284,12 +283,12 @@ function InventoryScreenContent() {
         ListHeaderComponent={renderHeader()}
         ListEmptyComponent={renderEmpty()}
         ListFooterComponent={loadingMore ? <View style={styles.footerSpinner}><ActivityIndicator color={colors.brand} /></View> : null}
-        contentContainerStyle={[styles.content, { paddingBottom: spacing.xxl + insets.bottom }]}
+        contentContainerStyle={[styles.content, { paddingBottom: spacing.xxl }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.35}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accentDark} colors={[colors.accentDark]} />}
       />
     </SafeAreaView>
   );

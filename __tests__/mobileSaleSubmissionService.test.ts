@@ -75,3 +75,30 @@ it('register guard rejection keeps its specific opening instruction', async () =
   jest.spyOn(globalThis, 'fetch').mockResolvedValue(response({ error: { code: 'cash_register_not_open' } }, 409));
   await expect(submit()).rejects.toMatchObject({ kind: 'business_error', code: 'cash_register_not_open', message: 'Necesitas abrir caja antes de registrar una venta.' });
 });
+
+it.each([
+  ['La facturación SAR no está habilitada para este negocio.', 'fiscal_disabled'],
+  ['No existe una autorización SAR activa para la serie 000-001-01. Registra y activa un CAI.', 'fiscal_authorization_missing'],
+  ['El CAI de la serie 000-001-01 venció y no hay una autorización siguiente preparada. Registra la próxima autorización SAR de esta serie.', 'fiscal_authorization_expired'],
+  ['El rango del CAI de la serie 000-001-01 está agotado y no hay una autorización siguiente preparada. Registra la próxima autorización SAR de esta serie.', 'fiscal_range_exhausted'],
+  ['El producto "Café" no tiene clasificación fiscal SAR. Configúralo como gravado, exento, exonerado o tasa cero antes de facturar.', 'fiscal_product_unclassified'],
+  ['Para una venta de L 10,000 o más debes registrar el RTN o documento de identificación del cliente.', 'fiscal_customer_identification_required'],
+])('preserves the known legacy business reason without exposing the raw response: %s', async (message, code) => {
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(response({ error: { code: 'sale_failed', message } }, 422));
+  await expect(submit()).rejects.toMatchObject({ kind: 'business_error', code, diagnostic: { httpStatus: 422, serverCode: 'sale_failed' } });
+});
+
+it('prefers a recognized POS error code nested inside the legacy adapter', async () => {
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(response({ error: { code: 'sale_failed', message: 'private', details: { pos_response: { code: 'invalid_account' } } } }, 422));
+  await expect(submit()).rejects.toMatchObject({ kind: 'business_error', code: 'invalid_account', message: saleSubmissionMessage('invalid_account') });
+});
+
+it('keeps an unknown exception private and does not misdiagnose it as a fiscal failure', async () => {
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(response({ error: { code: 'sale_failed', message: 'SQLSTATE fiscal CAI secret /server/path' } }, 422));
+  await expect(submit()).rejects.toMatchObject({ kind: 'business_error', code: 'sale_failed', message: saleSubmissionMessage('sale_failed') });
+});
+
+it('does not describe an unknown definitive 422 rejection as an uncertain confirmation', async () => {
+  jest.spyOn(globalThis, 'fetch').mockResolvedValue(response({ error: { code: 'new_business_rule', message: 'Private exception details' } }, 422));
+  await expect(submit()).rejects.toMatchObject({ kind: 'business_error', code: 'new_business_rule', message: saleSubmissionMessage('sale_failed') });
+});

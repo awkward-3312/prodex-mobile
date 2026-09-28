@@ -53,7 +53,7 @@ export default function MoreScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <AppHeader title="Más" subtitle="Cuenta y sesión" />
+        <AppHeader icon="grid-outline" title="Más" subtitle="Cuenta y sesión" />
         <FadeInView style={styles.account}>
           <UserAvatar size={64} />
           <View style={styles.accountCopy}>
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   sectionTitle: { marginBottom: spacing.sm, color: colors.inkMuted, fontSize: 11, fontWeight: fontWeights.bold, letterSpacing: 0.4 },
   sectionBody: { ...surfaces.card, paddingHorizontal: spacing.lg, paddingVertical: spacing.xs },
   row: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  rowIcon: { width: 32, height: 32, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
+  rowIcon: { width: 32, height: 32, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
   rowIconDanger: { backgroundColor: colors.redSoft },
   rowLabel: { flex: 1, fontSize: typography.body, fontWeight: fontWeights.semibold },
   version: { marginTop: spacing.lg, color: colors.inkMuted, fontSize: 11, textAlign: 'center' },

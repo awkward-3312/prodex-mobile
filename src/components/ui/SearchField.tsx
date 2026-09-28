@@ -19,7 +19,7 @@ export function SearchField({ value, onChangeText, placeholder, accessibilityLab
   return (
     <View style={[styles.box, focused && styles.focused, style]}>
       <Ionicons name="search-outline" size={19} color={colors.inkMuted} />
-      <TextInput
+      <TextInput selectionColor={colors.accent} cursorColor={colors.accentDark}
         accessibilityLabel={accessibilityLabel}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
@@ -41,7 +41,7 @@ export function SearchField({ value, onChangeText, placeholder, accessibilityLab
 
 const styles = StyleSheet.create({
   box: { ...surfaces.input, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md },
-  focused: { borderColor: colors.brand, backgroundColor: colors.surface },
+  focused: { borderColor: colors.accentDark, backgroundColor: colors.surface },
   input: { flex: 1, minHeight: sizing.touch, color: colors.ink, fontSize: typography.body },
   clear: { width: sizing.touch, height: sizing.touch, alignItems: 'center', justifyContent: 'center' },
 });

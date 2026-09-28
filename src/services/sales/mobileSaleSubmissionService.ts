@@ -10,13 +10,13 @@ const text = (value: unknown): value is string => typeof value === 'string' && v
 
 export type SubmissionFailureKind = 'uncertain' | 'business_error' | 'session_expired';
 export class SaleSubmissionError extends Error {
-  constructor(public kind: SubmissionFailureKind, public code: string) {
-    super(saleSubmissionMessage(code));
+  constructor(public kind: SubmissionFailureKind, public code: string, public diagnostic?: { httpStatus: number; serverCode?: string }) {
+    super(saleSubmissionMessage(code, kind));
     this.name = 'SaleSubmissionError';
   }
 }
 
-export function saleSubmissionMessage(code: string): string {
+export function saleSubmissionMessage(code: string, kind: SubmissionFailureKind = 'uncertain'): string {
   const messages: Record<string, string> = {
     cash_register_not_open: 'Necesitas abrir caja antes de registrar una venta.',
     register_already_closed: 'Esta caja ya está cerrada.',
@@ -34,7 +34,13 @@ export function saleSubmissionMessage(code: string): string {
     forbidden: 'No tienes permiso para registrar esta venta.',
     fiscal_error: 'No se pudo emitir el documento fiscal. Revisa la configuración fiscal con tu administrador.',
     sar_error: 'No se pudo emitir el documento fiscal. Revisa la configuración fiscal con tu administrador.',
-    sale_failed: 'No se pudo registrar la venta. Revisa el carrito, los pagos y la configuración fiscal.',
+    sale_failed: 'PRODEX rechazó la solicitud sin indicar un motivo reconocido. Solicita a tu administrador revisar el intento de venta.',
+    fiscal_disabled: 'La facturación SAR no está habilitada para este negocio. Contacta a tu administrador.',
+    fiscal_authorization_missing: 'La serie fiscal no tiene una autorización SAR activa. Solicita a tu administrador registrar y activar un CAI.',
+    fiscal_authorization_expired: 'El CAI venció y no hay una autorización siguiente preparada. Contacta a tu administrador.',
+    fiscal_range_exhausted: 'El rango del CAI está agotado y no hay una autorización siguiente preparada. Contacta a tu administrador.',
+    fiscal_product_unclassified: 'Un producto del carrito no tiene clasificación fiscal SAR. Solicita a tu administrador configurarlo antes de facturar.',
+    fiscal_customer_identification_required: 'Para una venta de L 10,000 o más, registra el RTN o documento de identificación del cliente.',
     validation_error: 'Revisa los datos de la venta y vuelve a validarla.',
     unsupported_product_type: 'Un producto no está disponible para venta móvil.',
     serial_selection_required: 'Un producto requiere seleccionar su serie desde el POS web.',
@@ -46,7 +52,7 @@ export function saleSubmissionMessage(code: string): string {
     stale_preflight: 'Los datos cambiaron. Revisa la venta nuevamente antes de confirmarla.',
     offline: 'Sin conexión a internet. Conéctate y vuelve a intentarlo.',
   };
-  return messages[code] ?? 'No pudimos confirmar la respuesta. Puedes reintentar de forma segura.';
+  return messages[code] ?? (kind === 'business_error' ? messages.sale_failed : 'No pudimos confirmar la respuesta. Puedes reintentar de forma segura.');
 }
 
 /** Whitelist intent fields; never forward client prices, tax, stock or fiscal fields. */
@@ -74,6 +80,26 @@ export function parseSaleSubmissionResponse(payload: unknown, expectedUuid: stri
   return { success: true, idempotent: data.idempotent, sale: { id: sale.id, ref: sale.ref, sale_uuid: expectedUuid, grand_total: sale.grand_total, payment_status: sale.payment_status as 'paid' | 'partial' | 'unpaid', fiscal_number: sale.fiscal_number as string | null ?? null, fiscal_status: sale.fiscal_status as string | null ?? null } };
 }
 
+/** The legacy POS adapter wraps fiscal failures as sale_failed. Recognize only
+ * known business messages; never display arbitrary exception/SQL text. Prefer
+ * stable codes when the backend supplies one inside pos_response. */
+function businessFailureCode(error: ApiError): string {
+  const details = record(error.details) ? error.details : null;
+  const posResponse = details && record(details.pos_response) ? details.pos_response : null;
+  const nestedCode = posResponse && typeof posResponse.code === 'string' ? posResponse.code : null;
+  const knownCodes = ['fiscal_error', 'sar_error', 'invalid_account', 'invalid_payment_method', 'inactive_payment_method', 'payment_total_invalid', 'insufficient_stock', 'invalid_client', 'invalid_operational_context', 'cash_register_not_open'];
+  if (nestedCode && knownCodes.includes(nestedCode)) return nestedCode;
+  if (error.code !== 'sale_failed') return error.code ?? 'validation_error';
+  const message = error.message.trim();
+  if (message === 'La facturación SAR no está habilitada para este negocio.') return 'fiscal_disabled';
+  if (message === 'Para una venta de L 10,000 o más debes registrar el RTN o documento de identificación del cliente.') return 'fiscal_customer_identification_required';
+  if (/^(?:No existe|No hay) una autorización SAR activa para la serie \d{3}-\d{3}-\d{2}\. Registra y activa un CAI\.$/.test(message)) return 'fiscal_authorization_missing';
+  if (/^El CAI de la serie \d{3}-\d{3}-\d{2} venció y no hay una autorización siguiente preparada\. Registra la próxima autorización SAR de esta serie\.$/.test(message)) return 'fiscal_authorization_expired';
+  if (/^El rango del CAI de la serie \d{3}-\d{3}-\d{2} está agotado y no hay una autorización siguiente preparada\. Registra la próxima autorización SAR de esta serie\.$/.test(message)) return 'fiscal_range_exhausted';
+  if (/^El producto "[^"\r\n]{1,200}" no tiene clasificación fiscal SAR\. Configúralo como gravado, exento, exonerado o tasa cero antes de facturar\.$/.test(message)) return 'fiscal_product_unclassified';
+  return 'sale_failed';
+}
+
 export async function submitMobileSale({ baseUrl, accessToken, request }: { baseUrl: string; accessToken: string; request: SaleSubmissionRequest }): Promise<SaleSubmissionResponse> {
   try {
     // Deliberately no automatic retry and no unmount signal: a POST may already have committed.
@@ -84,7 +110,7 @@ export async function submitMobileSale({ baseUrl, accessToken, request }: { base
     if (error instanceof ApiError) {
       if (isAuthInvalidError(error)) throw new SaleSubmissionError('session_expired', 'session_expired');
       if (error.status === 403) throw new SaleSubmissionError('business_error', 'forbidden');
-      if (error.status === 422) throw new SaleSubmissionError('business_error', error.code ?? 'validation_error');
+      if (error.status === 422) throw new SaleSubmissionError('business_error', businessFailureCode(error), { httpStatus: error.status, serverCode: error.code });
       if (error.status === 409 && error.code === 'cash_register_not_open') throw new SaleSubmissionError('business_error', 'cash_register_not_open');
       if (error.status === 409) throw new SaleSubmissionError('uncertain', 'idempotency_conflict');
       throw new SaleSubmissionError('uncertain', error.code ?? 'server_error');

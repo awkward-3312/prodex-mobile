@@ -6,7 +6,7 @@ import { colors, fontWeights, radii, spacing } from '../../theme';
 export type StatusTone = 'positive' | 'warning' | 'critical';
 
 const TONES: Record<StatusTone, { background: string; foreground: string }> = {
-  positive: { background: colors.greenSoft, foreground: colors.green },
+  positive: { background: colors.successSoft, foreground: colors.success },
   warning: { background: colors.amberSoft, foreground: colors.amber },
   critical: { background: colors.redSoft, foreground: colors.red },
 };

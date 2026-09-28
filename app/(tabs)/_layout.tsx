@@ -1,39 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { StyleSheet } from 'react-native';
-import type { ColorValue } from 'react-native';
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import { StyleSheet, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useEffect } from 'react';
 
+import { ProdexTabItem } from '../../src/components/navigation/ProdexTabItem';
 import { useCashRegister } from '../../src/context/CashRegisterContext';
 import { useAuth } from '../../src/context/AuthContext';
-import { colors, fontWeights, motion, radii, spacing } from '../../src/theme';
+import { colors, radii, sizing, spacing } from '../../src/theme';
 
-function TabIcon({ color, focused, name, isPos }: { color: ColorValue; focused: boolean; name: keyof typeof Ionicons.glyphMap; isPos: boolean }) {
-  const reducedMotion = useReducedMotion();
-  const progress = useSharedValue(focused ? 1 : 0);
-
-  useEffect(() => {
-    progress.value = withTiming(focused ? 1 : 0, { duration: reducedMotion ? motion.duration.fast : motion.duration.normal });
-  }, [focused, progress, reducedMotion]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: 0.82 + progress.value * 0.18,
-    transform: [{ scale: 1 + progress.value * (reducedMotion ? 0 : 0.04) }],
-  }));
-
-  const iconSize = focused ? (isPos ? 24 : 23) : 22;
-
-  return (
-    <Animated.View style={[styles.iconSlot, focused && styles.activeIcon, isPos && styles.posIcon, animatedStyle]}>
-      <Ionicons name={name} size={iconSize} color={color} />
-    </Animated.View>
-  );
-}
+const tabRoutes: Record<string, { activeIcon: keyof typeof Ionicons.glyphMap; inactiveIcon: keyof typeof Ionicons.glyphMap; label: string }> = {
+  index: { activeIcon: 'home', inactiveIcon: 'home-outline', label: 'Inicio' },
+  pos: { activeIcon: 'cart', inactiveIcon: 'cart-outline', label: 'POS' },
+  inventory: { activeIcon: 'cube', inactiveIcon: 'cube-outline', label: 'Inventario' },
+  sales: { activeIcon: 'receipt', inactiveIcon: 'receipt-outline', label: 'Ventas' },
+  more: { activeIcon: 'menu', inactiveIcon: 'menu-outline', label: 'Más' },
+};
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
+  const itemHeight = sizing.touch + spacing.xs + 14 * Math.max(0, fontScale - 1);
   const { status } = useCashRegister();
   const { hasPermission } = useAuth();
 
@@ -41,21 +27,18 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
+        animation: 'none',
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.inkMuted,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: fontWeights.semibold },
-        tabBarStyle: { height: 66 + insets.bottom, paddingTop: spacing.xs, paddingBottom: insets.bottom + spacing.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0 },
+        // ProdexTabItem owns both the icon and its label. Supplying the icon
+        // renderer prevents the navigator from inserting its MissingIcon (⏷).
+        tabBarShowLabel: false,
+        tabBarIconStyle: { width: '100%', height: itemHeight },
+        tabBarStyle: { height: itemHeight + spacing.sm + insets.bottom, paddingTop: spacing.xs, paddingBottom: insets.bottom + spacing.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0 },
         tabBarItemStyle: { minHeight: 44, borderRadius: radii.md },
-        tabBarIcon: ({ color, focused }) => {
-          const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
-            index: focused ? 'home' : 'home-outline',
-            pos: focused ? 'cart' : 'cart-outline',
-            inventory: focused ? 'cube' : 'cube-outline',
-            sales: focused ? 'receipt' : 'receipt-outline',
-            more: focused ? 'menu' : 'menu-outline',
-          };
-          const isPos = route.name === 'pos';
-          return <TabIcon color={color} focused={focused} isPos={isPos} name={icons[route.name] ?? 'ellipse-outline'} />;
+        tabBarIcon: ({ focused }) => {
+          const tab = tabRoutes[route.name] ?? { activeIcon: 'ellipse', inactiveIcon: 'ellipse-outline', label: route.name };
+          return <ProdexTabItem activeName={tab.activeIcon} focused={focused} inactiveName={tab.inactiveIcon} label={tab.label} />;
         },
       })}
     >
@@ -67,9 +50,3 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  iconSlot: { width: 46, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: radii.pill },
-  activeIcon: { backgroundColor: colors.brandSoft },
-  posIcon: { },
-});

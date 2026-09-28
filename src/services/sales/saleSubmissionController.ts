@@ -137,4 +137,12 @@ export class SaleSubmissionController {
     } finally { this.busy = false; }
   }
   resetDraft() { if (!this.busy && !this.isLocked() && this.state.status !== 'success') this.draftUuid = null; }
+
+  /** Only an editable, definitive rejection can return to validation. Never
+   * release an uncertain attempt or replace its persisted UUID. */
+  clearBusinessError() {
+    if (!this.busy && this.state.status === 'business_error') {
+      this.update({ status: 'idle', attempt: null, error: null });
+    }
+  }
 }

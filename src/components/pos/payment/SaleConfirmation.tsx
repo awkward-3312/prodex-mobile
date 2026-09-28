@@ -9,8 +9,8 @@ const paymentLabels = { paid: 'Pagada', partial: 'Pago parcial', unpaid: 'Pendie
 export function SaleConfirmation({ attempt, error, onNewSale, onSales, onRetryInvoice }: { attempt: SaleAttempt; error?: string; onNewSale: () => void; onSales: () => void; onRetryInvoice?: () => void }) {
   const sale = attempt.response!.sale;
   return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><ScrollView contentContainerStyle={styles.content}>
-    <View style={styles.mark}><Ionicons name="checkmark" size={30} color={colors.brand} /></View>
-    <Text accessibilityRole="header" style={styles.title}>Venta registrada</Text>
+    <View style={styles.mark}><Ionicons name="checkmark" size={30} color={colors.success} /></View>
+    <Text accessibilityLiveRegion="polite" accessibilityRole="header" style={styles.title}>Venta registrada</Text>
     <Text style={styles.subtitle}>{onRetryInvoice ? 'Venta registrada correctamente. No pudimos cargar la factura oficial.' : 'La venta quedó confirmada en PRODEX.'}</Text>
     <View style={styles.card}>
       <Text style={styles.label}>Referencia</Text><Text selectable style={styles.reference}>{sale.ref}</Text>
@@ -27,7 +27,7 @@ export function SaleConfirmation({ attempt, error, onNewSale, onSales, onRetryIn
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { flexGrow: 1, padding: spacing.xl, justifyContent: 'center' },
-  mark: { alignSelf: 'center', backgroundColor: colors.brandSoft, padding: spacing.lg, borderRadius: radii.pill },
+  mark: { alignSelf: 'center', backgroundColor: colors.successSoft, padding: spacing.lg, borderRadius: radii.pill },
   title: { textAlign: 'center', marginTop: spacing.lg, color: colors.ink, fontSize: typography.title, fontWeight: fontWeights.bold },
   subtitle: { textAlign: 'center', color: colors.inkMuted, marginTop: spacing.sm, lineHeight: 20 },
   card: { ...surfaces.card, marginTop: spacing.xl, padding: spacing.lg },

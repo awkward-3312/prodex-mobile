@@ -2,7 +2,7 @@ import { usePosCart } from '../../src/context/PosCartContext';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FadeInView } from '../../src/components/motion';
 import { CategoryChip } from '../../src/components/pos/CategoryChip';
@@ -44,7 +44,6 @@ export default function SalesScreen() {
 
 function SalesScreenContent() {
   const { salesRevision } = usePosCart();
-  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<MobileSalePaymentStatus | null>(null);
@@ -169,7 +168,7 @@ function SalesScreenContent() {
 
   const renderHeader = () => (
     <FadeInView distance={6}>
-      <AppHeader title="Ventas" subtitle="Historial y estados de cobro" />
+      <AppHeader icon="receipt-outline" title="Ventas" subtitle="Historial y estados de cobro" />
 
       <SearchField
         accessibilityLabel="Buscar venta por referencia o cliente"
@@ -219,12 +218,12 @@ function SalesScreenContent() {
         ListHeaderComponent={renderHeader()}
         ListEmptyComponent={renderEmpty()}
         ListFooterComponent={loadingMore ? <View style={styles.footerSpinner}><ActivityIndicator color={colors.brand} /></View> : null}
-        contentContainerStyle={[styles.content, { paddingBottom: spacing.xxl + insets.bottom }]}
+        contentContainerStyle={[styles.content, { paddingBottom: spacing.xxl }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.35}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accentDark} colors={[colors.accentDark]} />}
       />
     </SafeAreaView>
   );

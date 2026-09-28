@@ -46,21 +46,21 @@ export default function LoginScreen() {
             <Text style={styles.subtitle}>Accede a tu operación y continúa donde lo dejaste.</Text>
             <View style={styles.form}>
               <Text style={styles.label}>Espacio de trabajo</Text>
-              <View style={styles.inputRow}>
+              <View style={[styles.inputRow, focusedField === "workspace" && styles.focusedInput]}>
                 <Ionicons name="business-outline" size={18} color={colors.inkMuted} style={styles.inputIcon} />
-                <TextInput accessibilityLabel="Espacio de trabajo" autoCapitalize="none" autoCorrect={false} value={workspace} onChangeText={(value) => { setWorkspace(value); setLoginError(''); }} placeholder="Identificador de tu empresa" placeholderTextColor={colors.inkMuted} onFocus={() => setFocusedField("workspace")} onBlur={() => setFocusedField(null)} style={styles.inputWithIcon} returnKeyType="next" />
+                <TextInput selectionColor={colors.accent} cursorColor={colors.accentDark} accessibilityLabel="Espacio de trabajo" autoCapitalize="none" autoCorrect={false} value={workspace} onChangeText={(value) => { setWorkspace(value); setLoginError(''); }} placeholder="Identificador de tu empresa" placeholderTextColor={colors.inkMuted} onFocus={() => setFocusedField("workspace")} onBlur={() => setFocusedField(null)} style={styles.inputWithIcon} returnKeyType="next" />
               </View>
 
               <Text style={[styles.label, styles.labelSpaced]}>Correo electrónico</Text>
               <View style={[styles.inputRow, focusedField === "email" && styles.focusedInput]}>
                 <Ionicons name="mail-outline" size={18} color={colors.inkMuted} style={styles.inputIcon} />
-                <TextInput accessibilityLabel="Correo electrónico" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" value={email} onChangeText={(value) => { setEmail(value); setLoginError(''); }} placeholder="nombre@empresa.com" placeholderTextColor={colors.inkMuted} onFocus={() => setFocusedField("email")} onBlur={() => setFocusedField(null)} style={styles.inputWithIcon} returnKeyType="next" />
+                <TextInput selectionColor={colors.accent} cursorColor={colors.accentDark} accessibilityLabel="Correo electrónico" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" value={email} onChangeText={(value) => { setEmail(value); setLoginError(''); }} placeholder="nombre@empresa.com" placeholderTextColor={colors.inkMuted} onFocus={() => setFocusedField("email")} onBlur={() => setFocusedField(null)} style={styles.inputWithIcon} returnKeyType="next" />
               </View>
 
               <Text style={[styles.label, styles.labelSpaced]}>Contraseña</Text>
               <View style={[styles.inputRow, focusedField === "password" && styles.focusedInput, !!loginError && styles.erroredInput]}>
                 <Ionicons name="lock-closed-outline" size={18} color={loginError ? colors.red : colors.inkMuted} style={styles.inputIcon} />
-                <TextInput accessibilityLabel="Contraseña" autoCapitalize="none" secureTextEntry={!showPassword} value={password} onChangeText={(value) => { setPassword(value); setLoginError(''); }} placeholder="Tu contraseña" placeholderTextColor={colors.inkMuted} onFocus={() => setFocusedField("password")} onBlur={() => setFocusedField(null)} style={styles.passwordInput} returnKeyType="done" onSubmitEditing={submit} />
+                <TextInput selectionColor={colors.accent} cursorColor={colors.accentDark} accessibilityLabel="Contraseña" autoCapitalize="none" secureTextEntry={!showPassword} value={password} onChangeText={(value) => { setPassword(value); setLoginError(''); }} placeholder="Tu contraseña" placeholderTextColor={colors.inkMuted} onFocus={() => setFocusedField("password")} onBlur={() => setFocusedField(null)} style={styles.passwordInput} returnKeyType="done" onSubmitEditing={submit} />
                 <PressableScale accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} accessibilityRole="button" onPress={() => setShowPassword((value) => !value)} style={styles.passwordToggle}>
                   <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.inkMuted} />
                 </PressableScale>
@@ -94,17 +94,17 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   flex: { flex: 1 },
   content: { flexGrow: 1, width: '100%', maxWidth: 480, alignSelf: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.xl },
-  welcomeBadge: { alignSelf: 'flex-start', marginTop: spacing.xl, paddingHorizontal: spacing.md, paddingVertical: 6, backgroundColor: colors.brandSoft, borderRadius: radii.pill },
+  welcomeBadge: { alignSelf: 'flex-start', marginTop: spacing.xl, paddingHorizontal: spacing.md, paddingVertical: 6, backgroundColor: colors.accent, borderRadius: radii.pill },
   welcomeBadgeText: { fontSize: 10, letterSpacing: 1.2, fontWeight: fontWeights.bold, color: colors.brandDark },
   title: { marginTop: spacing.md, color: colors.ink, fontSize: 28, letterSpacing: -0.8, fontWeight: fontWeights.bold },
   subtitle: { marginTop: spacing.xs, color: colors.inkMuted, fontSize: 14, lineHeight: 20 },
-  form: { marginTop: spacing.xl, padding: spacing.lg, borderRadius: radii.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  form: { marginTop: spacing.xl, padding: spacing.lg, borderRadius: radii.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderTopWidth: 3, borderTopColor: colors.accent },
   label: { marginBottom: spacing.xs, color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.semibold },
   labelSpaced: { marginTop: spacing.md },
   inputRow: { flexDirection: 'row', alignItems: 'center', minHeight: sizing.input, borderRadius: radii.sm, backgroundColor: colors.canvas, borderWidth: 1, borderColor: colors.line },
   inputIcon: { marginLeft: spacing.md },
   inputWithIcon: { flex: 1, minHeight: sizing.input, paddingHorizontal: spacing.sm, color: colors.ink, fontSize: 14 },
-  focusedInput: { borderColor: colors.brand, backgroundColor: colors.surface },
+  focusedInput: { borderColor: colors.accentDark, backgroundColor: colors.surface },
   erroredInput: { borderColor: colors.red, backgroundColor: colors.redSoft },
   passwordInput: { flex: 1, minHeight: 50, paddingHorizontal: spacing.sm, color: colors.ink, fontSize: 14 },
   passwordToggle: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },

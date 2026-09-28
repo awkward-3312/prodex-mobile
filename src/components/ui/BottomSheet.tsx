@@ -1,10 +1,7 @@
-import type { ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import type { ReactNode, RefObject } from 'react';
+import type { StyleProp, View, ViewStyle } from 'react-native';
 
-import { FadeInView, PressableScale } from '../motion';
-import { colors, motion, radii, spacing } from '../../theme';
-import { Ionicons } from '@expo/vector-icons';
+import { MotionSheet } from './MotionSheet';
 
 type Props = {
   visible: boolean;
@@ -15,53 +12,41 @@ type Props = {
   heightPct?: number;
   /** Cap on a content-sized sheet's height as a fraction of window height. */
   maxHeightPct?: number;
+  /** @deprecated The handle now follows `gestureEnabled` so it always represents a real gesture. */
   showHandle?: boolean;
   showCloseButton?: boolean;
   closeAccessibilityLabel?: string;
+  accessibilityLabel?: string;
+  dismissible?: boolean;
+  gestureEnabled?: boolean;
+  keyboardAvoiding?: boolean;
+  contentStyle?: StyleProp<ViewStyle>;
+  initialFocusRef?: RefObject<View | null>;
+  returnFocusRef?: RefObject<View | null>;
 };
 
 /**
- * Single bottom-sheet primitive: same backdrop, handle, corner radius and
- * safe-area handling everywhere. Built on the technique already proven by
- * the POS cart sheet (Modal transparent + Reanimated slide-in), not native
- * Modal slide animation, so behavior is identical on Android and iOS
- * instead of depending on each platform's own Modal transition.
+ * Compatibility wrapper for existing consumers. MotionSheet owns the shared
+ * gesture, transition, accessibility and safe-area behavior.
  */
-export function BottomSheet({ visible, onClose, children, heightPct, maxHeightPct = 0.85, showHandle = true, showCloseButton = false, closeAccessibilityLabel = 'Cerrar' }: Props) {
-  const { height } = useWindowDimensions();
-
+export function BottomSheet({ visible, onClose, children, heightPct, maxHeightPct = 0.85, showCloseButton = false, closeAccessibilityLabel = 'Cerrar', accessibilityLabel, dismissible = true, gestureEnabled = true, keyboardAvoiding = false, contentStyle, initialFocusRef, returnFocusRef }: Props) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <Pressable accessibilityLabel={closeAccessibilityLabel} accessibilityRole="button" onPress={onClose} style={styles.backdrop} />
-        <FadeInView
-          distance={18}
-          duration={motion.duration.slow}
-          style={[
-            styles.sheetWrap,
-            heightPct ? { height: height * heightPct } : { maxHeight: height * maxHeightPct },
-          ]}
-        >
-          <SafeAreaView edges={['bottom']} style={styles.sheet}>
-            {showHandle ? <View style={styles.handle} /> : null}
-            {showCloseButton ? (
-              <PressableScale accessibilityLabel={closeAccessibilityLabel} accessibilityRole="button" onPress={onClose} style={styles.close}>
-                <Ionicons name="close" size={20} color={colors.ink} />
-              </PressableScale>
-            ) : null}
-            {children}
-          </SafeAreaView>
-        </FadeInView>
-      </View>
-    </Modal>
+    <MotionSheet
+      visible={visible}
+      onClose={onClose}
+      heightPct={heightPct}
+      maxHeightPct={maxHeightPct}
+      showCloseButton={showCloseButton}
+      closeAccessibilityLabel={closeAccessibilityLabel}
+      accessibilityLabel={accessibilityLabel}
+      dismissible={dismissible}
+      gestureEnabled={gestureEnabled}
+      keyboardAvoiding={keyboardAvoiding}
+      contentStyle={contentStyle}
+      initialFocusRef={initialFocusRef}
+      returnFocusRef={returnFocusRef}
+    >
+      {children}
+    </MotionSheet>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(10, 30, 54, 0.4)' },
-  sheetWrap: { width: '100%' },
-  sheet: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg, backgroundColor: colors.surface },
-  handle: { alignSelf: 'center', width: 38, height: 4, marginBottom: spacing.md, borderRadius: radii.pill, backgroundColor: colors.line },
-  close: { position: 'absolute', top: spacing.sm, right: spacing.lg, width: 42, height: 42, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas, zIndex: 1 },
-});

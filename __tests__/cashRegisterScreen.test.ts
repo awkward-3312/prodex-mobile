@@ -10,6 +10,11 @@ jest.mock('../src/components/motion', () => {
     FadeInView: ({ children, style }: any) => React.createElement(View, { style }, children),
   };
 });
+jest.mock('../src/components/ui/MotionSheet', () => {
+  const React = jest.requireActual('react');
+  const { View } = jest.requireActual('react-native');
+  return { MotionSheet: ({ visible, children, ...props }: any) => visible ? React.createElement(View, props, children) : null };
+});
 
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({ router: { back: () => mockBack(), push: jest.fn() }, useFocusEffect: (effect: any) => jest.requireActual('react').useEffect(effect, [effect]) }));
@@ -36,6 +41,17 @@ import CashRegisterContent from '../app/cash-register/index';
 import { CashRegisterProvider } from '../src/context/CashRegisterContext';
 function CashRegisterScreen() { return React.createElement(CashRegisterProvider, null, React.createElement(CashRegisterContent)); }
 import { MobileCashRegisterError } from '../src/services/cashRegister/mobileCashRegisterService';
+
+// Dispose lists and provider subscriptions so their timers cannot outlive a test.
+const mountedScreens: ReturnType<typeof create>[] = [];
+function renderScreen() {
+  const root = create(React.createElement(CashRegisterScreen));
+  mountedScreens.push(root);
+  return root;
+}
+afterEach(async () => {
+  await act(async () => { mountedScreens.splice(0).forEach(root => root.unmount()); });
+});
 
 const openRegister = () => ({
   status: 'open' as const,
@@ -72,7 +88,7 @@ beforeEach(() => {
 it('shows loading then the open register summary with payment methods', async () => {
   mockGetCurrent.mockResolvedValue(openRegister());
   let root!: ReturnType<typeof create>;
-  await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });
+  await act(async () => { root = renderScreen(); await flush(); });
 
   const texts = findAllText(root).join(' ');
   expect(texts).toContain('Caja abierta');
@@ -87,7 +103,7 @@ it('hides Entrada/Salida for a report-only user on an open register', async () =
   mockPermissions = ['cash_register_report'];
   mockGetCurrent.mockResolvedValue(openRegister());
   let root!: ReturnType<typeof create>;
-  await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });
+  await act(async () => { root = renderScreen(); await flush(); });
 
   const texts = findAllText(root).join(' ');
   expect(texts).toContain('Caja abierta');
@@ -98,7 +114,7 @@ it('hides Entrada/Salida for a report-only user on an open register', async () =
 it('shows an "Abrir caja" button when the user can operate the register', async () => {
   mockGetCurrent.mockResolvedValue({ status: 'closed', register: null, summary: null });
   let root!: ReturnType<typeof create>;
-  await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });
+  await act(async () => { root = renderScreen(); await flush(); });
 
   const texts = findAllText(root).join(' ');
   expect(texts).toContain('No tienes una caja abierta.');
@@ -109,7 +125,7 @@ it('hides the "Abrir caja" button for a report-only user', async () => {
   mockPermissions = ['cash_register_report'];
   mockGetCurrent.mockResolvedValue({ status: 'closed', register: null, summary: null });
   let root!: ReturnType<typeof create>;
-  await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });
+  await act(async () => { root = renderScreen(); await flush(); });
 
   const texts = findAllText(root).join(' ');
   expect(texts).toContain('No tienes una caja abierta.');
@@ -119,7 +135,7 @@ it('hides the "Abrir caja" button for a report-only user', async () => {
 it('shows a retry state on network error and recovers on retry', async () => {
   mockGetCurrent.mockRejectedValueOnce(new MobileCashRegisterError('network_error', 'Network error'));
   let root!: ReturnType<typeof create>;
-  await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });
+  await act(async () => { root = renderScreen(); await flush(); });
   expect(findAllText(root).join(' ')).toContain('No pudimos cargar la caja.');
 
   mockGetCurrent.mockResolvedValueOnce({ status: 'closed', register: null, summary: null });
@@ -130,14 +146,14 @@ it('shows a retry state on network error and recovers on retry', async () => {
 
 it('signs out globally on a 401', async () => {
   mockGetCurrent.mockRejectedValueOnce(new MobileCashRegisterError('session_expired', 'Session expired'));
-  await act(async () => { create(React.createElement(CashRegisterScreen)); await flush(); });
+  await act(async () => { renderScreen(); await flush(); });
   expect(mockSignOut).toHaveBeenCalledTimes(1);
 });
 
 it('pull-to-refresh reloads the current register', async () => {
   mockGetCurrent.mockResolvedValue(openRegister());
   let root!: ReturnType<typeof create>;
-  await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });
+  await act(async () => { root = renderScreen(); await flush(); });
   mockGetCurrent.mockClear();
 
   const scroll = root.root.findAll((node) => node.props.refreshControl !== undefined)[0];
@@ -148,7 +164,7 @@ it('pull-to-refresh reloads the current register', async () => {
 it('does not refetch on re-render (no loop)', async () => {
   mockGetCurrent.mockResolvedValue(openRegister());
   let root!: ReturnType<typeof create>;
-  await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });
+  await act(async () => { root = renderScreen(); await flush(); });
   await act(async () => { root.update(React.createElement(CashRegisterScreen)); await flush(); });
   expect(mockGetCurrent).toHaveBeenCalledTimes(1);
 });
@@ -157,7 +173,7 @@ it('hides the Actual/Historial segment without cash_register_report permission',
   mockPermissions = ['Pos_view'];
   mockGetCurrent.mockResolvedValue({ status: 'closed', register: null, summary: null });
   let root!: ReturnType<typeof create>;
-  await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });
+  await act(async () => { root = renderScreen(); await flush(); });
   expect(findAllText(root)).not.toContain('Historial');
 });
 
@@ -169,7 +185,7 @@ it('history tab lists closed sessions with pagination and refresh', async () => 
   });
 
   let root!: ReturnType<typeof create>;
-  await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });
+  await act(async () => { root = renderScreen(); await flush(); });
   pressByLabel(root, 'Filtrar por Historial');
   await flush();
 
@@ -189,7 +205,7 @@ it('history shows a friendly error and empty states', async () => {
   mockGetHistory.mockRejectedValueOnce(new MobileCashRegisterError('forbidden', 'Forbidden'));
 
   let root!: ReturnType<typeof create>;
-  await act(async () => { root = create(React.createElement(CashRegisterScreen)); await flush(); });
+  await act(async () => { root = renderScreen(); await flush(); });
   pressByLabel(root, 'Filtrar por Historial');
   await flush();
 

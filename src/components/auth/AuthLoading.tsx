@@ -1,16 +1,16 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fontWeights, radii, spacing } from '../../theme';
+import { BrandSignature } from '../ui/BrandSignature';
 
 type Props = { message?: string; onRetry?: () => void };
 
 export function AuthLoading({ message = 'Preparando tu sesión...', onRetry }: Props) {
-  return <View style={styles.screen}><Text style={styles.brand}>PRODEX</Text><Text style={styles.text}>{message}</Text>{onRetry && <Pressable accessibilityLabel="Reintentar sesión" accessibilityRole="button" onPress={onRetry} style={styles.retry}><Text style={styles.retryText}>Reintentar</Text></Pressable>}</View>;
+  return <View style={styles.screen}><BrandSignature /><Text style={styles.text}>{message}</Text>{onRetry && <Pressable accessibilityLabel="Reintentar sesión" accessibilityRole="button" onPress={onRetry} style={styles.retry}><Text style={styles.retryText}>Reintentar</Text></Pressable>}</View>;
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas },
-  brand: { color: colors.brand, fontSize: 24, fontWeight: fontWeights.heavy },
   text: { marginTop: spacing.sm, color: colors.inkMuted, fontSize: 13 },
   retry: { minHeight: 44, marginTop: spacing.lg, paddingHorizontal: spacing.lg, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
   retryText: { color: colors.brandDark, fontSize: 13, fontWeight: fontWeights.bold },

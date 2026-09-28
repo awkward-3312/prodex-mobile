@@ -23,7 +23,7 @@ function Line({ label, value }: { label: string; value: string }) {
   return <View style={styles.line}><Text style={styles.muted}>{label}</Text><Text style={styles.value}>{value}</Text></View>;
 }
 function Field({ label, value, onChange, decimal = false }: { label: string; value?: string; onChange: (value: string) => void; decimal?: boolean }) {
-  return <View><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} style={styles.input} value={value ?? ''} onChangeText={onChange} keyboardType={decimal ? 'decimal-pad' : 'default'} placeholder={decimal ? '0.00' : undefined} placeholderTextColor={colors.inkMuted} /></View>;
+  return <View><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} style={styles.input} value={value ?? ''} onChangeText={onChange} keyboardType={decimal ? 'decimal-pad' : 'default'} placeholder={decimal ? '0.00' : undefined} placeholderTextColor={colors.inkMuted} selectionColor={colors.accent} cursorColor={colors.accentDark} /></View>;
 }
 
 export default function CloseCashRegisterScreen() {
@@ -89,7 +89,7 @@ export default function CloseCashRegisterScreen() {
   const busy = ['loading', 'submitting', 'session_expired', 'success'].includes(attempt.status);
   const recovery = uncertain || attempt.status === 'submitting' || attempt.status === 'business_error' || !!attempt.attempt;
 
-  return <SafeAreaView style={styles.safe} edges={['top']}>
+  return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
     <View style={styles.header}><AppHeader title="Cerrar caja" onBack={() => router.back()} /></View>
     {!hasPermission('Pos_view') ? <EmptyState icon="lock-closed-outline" title="No puedes operar esta caja." /> :
       attempt.status === 'loading' || (status === 'loading' && !recovery) ? <ActivityIndicator accessibilityLabel="Cargando cierre" color={colors.brand} /> :
@@ -122,7 +122,7 @@ export default function CloseCashRegisterScreen() {
               <Text style={styles.label}>{group === 'bills' ? 'Billetes' : 'Monedas'}</Text>
               {summary?.denominations?.[group].map(value => <View key={value} style={styles.line}>
                 <Text style={styles.value}>{money(value)}</Text>
-                <TextInput style={[styles.input, styles.quantity]} accessibilityLabel={`Cantidad de ${value}`} keyboardType="number-pad" value={quantityInputs[value] ?? '0'} onChangeText={text => {
+                <TextInput style={[styles.input, styles.quantity]} accessibilityLabel={`Cantidad de ${value}`} keyboardType="number-pad" value={quantityInputs[value] ?? '0'} selectionColor={colors.accent} cursorColor={colors.accentDark} onChangeText={text => {
                   if (/^\d{0,7}$/.test(text) && Number(text) <= 1000000) {
                     setQuantityInputs(current => ({ ...current, [value]: text })); setBreakdownConfirmed(false);
                   }
@@ -137,7 +137,7 @@ export default function CloseCashRegisterScreen() {
               <Text style={styles.error}>El desglose por denominaciones debe coincidir con el efectivo contado.</Text>
               <Text style={styles.error}>{reconciliation.delta < 0 ? 'Faltan' : 'Sobran'} {money(centsMoney(Math.abs(reconciliation.delta)))} en el desglose</Text>
             </View> : null}
-            <View style={styles.line}><Text style={styles.muted}>Confirmo el desglose por denominaciones</Text><Switch accessibilityLabel="Confirmo el desglose por denominaciones" value={breakdownConfirmed} disabled={!reconciliation.matches} onValueChange={setBreakdownConfirmed} /></View>
+            <View style={styles.line}><Text style={styles.muted}>Confirmo el desglose por denominaciones</Text><Switch accessibilityLabel="Confirmo el desglose por denominaciones" value={breakdownConfirmed} disabled={!reconciliation.matches} onValueChange={setBreakdownConfirmed} trackColor={{ false: colors.line, true: colors.accent }} thumbColor={colors.white} ios_backgroundColor={colors.line} /></View>
           </View>
           {summary && Number(summary.cardSystemTotal) > 0 ? <View style={styles.card}>
             <Text style={styles.section}>Conciliación de tarjetas</Text><Text style={styles.muted}>Datos opcionales del terminal</Text>
@@ -147,7 +147,7 @@ export default function CloseCashRegisterScreen() {
             <Field label="Notas de tarjetas" value={draft.card_notes} onChange={v => set('card_notes', v)} />
           </View> : null}
           {summary && Number(summary.transferTotal) > 0 ? <View style={styles.card}>
-            <View style={styles.line}><Text style={styles.value}>Transferencias verificadas</Text><Switch accessibilityLabel="Transferencias verificadas" value={draft.transfers_verified ?? false} onValueChange={v => set('transfers_verified', v)} /></View>
+            <View style={styles.line}><Text style={styles.value}>Transferencias verificadas</Text><Switch accessibilityLabel="Transferencias verificadas" value={draft.transfers_verified ?? false} onValueChange={v => set('transfers_verified', v)} trackColor={{ false: colors.line, true: colors.accent }} thumbColor={colors.white} ios_backgroundColor={colors.line} /></View>
             <Field label="Notas de transferencias" value={draft.transfer_notes} onChange={v => set('transfer_notes', v)} />
           </View> : null}
           <View style={styles.card}><Text style={styles.section}>Efectivo al cierre</Text><Text style={styles.muted}>Opcional</Text>
@@ -156,12 +156,12 @@ export default function CloseCashRegisterScreen() {
             <Field label="Notas" value={draft.notes} onChange={v => set('notes', v)} />
           </View>
         </>}
-        {difference !== null ? <View style={[styles.card, { backgroundColor: difference === '0.00' ? colors.brandSoft : colors.amberSoft }]}><Line label={`Diferencia de caja · ${differenceLabel}`} value={money(difference)} /><Text style={styles.muted}>Estimación del conteo; PRODEX confirmará el resultado final.</Text></View> : null}
+        {difference !== null ? <View style={[styles.card, { backgroundColor: difference === '0.00' ? colors.successSoft : colors.amberSoft }]}><Line label={`Diferencia de caja · ${differenceLabel}`} value={money(difference)} /><Text style={styles.muted}>Estimación del conteo; PRODEX confirmará el resultado final.</Text></View> : null}
         {formError || attempt.error ? <Text accessibilityRole="alert" style={styles.error}>{formError ?? cashRegisterOperationMessage(attempt.error!.code)}</Text> : null}
         {uncertain ? <><Text style={styles.muted}>Hay un cierre pendiente de confirmar. Reintentar consultará la misma operación guardada.</Text><Button label="Reintentar cierre" onPress={retry} /></> :
           attempt.status === 'business_error' ? <Button label="Corregir" onPress={() => { controller.reset(); setConfirm(null); setBreakdownConfirmed(false); void refresh(); }} /> :
           <><Button label={confirm ? 'Cerrar caja' : 'Revisar cierre'} onPress={confirm ? submit : review} loading={busy} disabled={!confirm && !canReview} />
-          {confirm && !busy ? <PressableScale accessibilityRole="button" style={styles.option} onPress={() => setConfirm(null)}><Text style={styles.value}>Volver al conteo</Text></PressableScale> : null}</>}
+          {confirm && !busy ? <PressableScale accessibilityLabel="Volver al conteo" accessibilityRole="button" style={styles.option} onPress={() => setConfirm(null)}><Text style={styles.value}>Volver al conteo</Text></PressableScale> : null}</>}
       </ScrollView>}
   </SafeAreaView>;
 }
@@ -172,6 +172,6 @@ const styles = StyleSheet.create({
   muted: { color: colors.inkMuted, fontSize: 13, flexShrink: 1 }, value: { color: colors.ink, fontWeight: fontWeights.semibold },
   card: { ...surfaces.card, padding: spacing.lg, gap: spacing.sm }, line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   label: { color: colors.inkMuted, marginTop: spacing.md, marginBottom: spacing.xs }, input: { borderWidth: 1, borderColor: colors.line, borderRadius: radii.md, minHeight: sizing.touch, padding: spacing.md, color: colors.ink, fontSize: 16 }, quantity: { width: 96 },
-  option: { padding: spacing.md, borderRadius: radii.md, alignItems: 'center', minHeight: sizing.touch }, selected: { backgroundColor: colors.brandSoft },
+  option: { padding: spacing.md, borderRadius: radii.md, alignItems: 'center', minHeight: sizing.touch }, selected: { backgroundColor: colors.accent },
   error: { color: colors.red },
 });

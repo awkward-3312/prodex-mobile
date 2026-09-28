@@ -7,14 +7,17 @@ import { PosCartProvider } from '../src/context/PosCartContext';
 import { AuthLoading } from '../src/components/auth/AuthLoading';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { ConnectivityBanner } from '../src/components/ui/ConnectivityBanner';
+import { useProdexMotion } from '../src/components/motion';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { getAuthRedirect } from '../src/context/authRouting';
+import { getRootRouteOptions, getRootStackOptions, rootRoutes } from '../src/navigation/rootStackOptions';
 import { useEffect, useRef } from 'react';
 
 function AuthGate() {
   const { status, error, retryBootstrap } = useAuth();
   const pathname = usePathname();
   const navigationState = useRootNavigationState();
+  const { reducedMotion } = useProdexMotion();
   const redirecting = useRef<string | null>(null);
   const redirect = getAuthRedirect(status, pathname);
 
@@ -31,7 +34,11 @@ function AuthGate() {
   if (status === 'initializing' || status === 'bootstrapping') return <AuthLoading />;
   if (status === 'bootstrap_error') return <AuthLoading message={error ?? 'No se pudo restaurar la sesión.'} onRetry={retryBootstrap} />;
   if (redirect) return <AuthLoading />;
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={getRootStackOptions(reducedMotion)}>
+      {rootRoutes.map((name) => <Stack.Screen key={name} name={name} options={getRootRouteOptions(name, reducedMotion)} />)}
+    </Stack>
+  );
 }
 
 export default function RootLayout() {

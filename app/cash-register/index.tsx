@@ -46,7 +46,7 @@ function CurrentRegisterView({ canOperate }: { canOperate: boolean }) {
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator color={colors.brand} /></View>;
+    return <View style={styles.center}><ActivityIndicator color={colors.accentDark} /></View>;
   }
 
   if (errorMessage) {
@@ -56,7 +56,7 @@ function CurrentRegisterView({ canOperate }: { canOperate: boolean }) {
   return (
     <ScrollView
       contentContainerStyle={styles.tabContent}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('refresh')} tintColor={colors.brand} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('refresh')} tintColor={colors.accentDark} colors={[colors.accentDark]} />}
       showsVerticalScrollIndicator={false}
     >
       {data?.status === 'open' ? (
@@ -72,7 +72,7 @@ function CurrentRegisterView({ canOperate }: { canOperate: boolean }) {
           {canOperate ? (
             <View style={styles.movementRow}>
               <PressableScale accessibilityRole="button" accessibilityLabel="Entrada de efectivo" style={[styles.movementButton, styles.movementIn]} onPress={() => setMovementType('in')}>
-                <Ionicons name="arrow-down-circle-outline" size={18} color={colors.brand} />
+                <Ionicons name="arrow-down-circle-outline" size={18} color={colors.accentDark} />
                 <Text style={[styles.movementButtonText, { color: colors.brandDark }]}>Entrada</Text>
               </PressableScale>
               <PressableScale accessibilityRole="button" accessibilityLabel="Salida de efectivo" style={[styles.movementButton, styles.movementOut]} onPress={() => setMovementType('out')}>
@@ -193,7 +193,7 @@ function HistoryView() {
   };
 
   if (loadingInitial) {
-    return <View style={styles.center}><ActivityIndicator color={colors.brand} /></View>;
+    return <View style={styles.center}><ActivityIndicator color={colors.accentDark} /></View>;
   }
 
   return (
@@ -205,8 +205,8 @@ function HistoryView() {
       showsVerticalScrollIndicator={false}
       onEndReached={handleEndReached}
       onEndReachedThreshold={0.35}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(1, 'refresh')} tintColor={colors.brand} />}
-      ListFooterComponent={loadingMore ? <View style={styles.footerSpinner}><ActivityIndicator color={colors.brand} /></View> : null}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(1, 'refresh')} tintColor={colors.accentDark} colors={[colors.accentDark]} />}
+      ListFooterComponent={loadingMore ? <View style={styles.footerSpinner}><ActivityIndicator color={colors.accentDark} /></View> : null}
       ListEmptyComponent={
         errorMessage
           ? <EmptyState icon="cloud-offline-outline" title={errorMessage} actionLabel="Reintentar" onAction={() => load(1, 'replace')} compact />
@@ -223,7 +223,7 @@ export default function CashRegisterScreen() {
   const [tab, setTab] = useState<'current' | 'history'>('current');
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <AppHeader title="Caja" onBack={() => router.back()} />
       </View>
@@ -245,13 +245,13 @@ const styles = StyleSheet.create({
   tabContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brand },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
   statusText: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
   locationLabel: { marginTop: spacing.xs, color: colors.inkMuted, fontSize: 13, fontWeight: fontWeights.semibold },
   openedAt: { marginTop: 2, color: colors.inkMuted, fontSize: 12 },
   movementRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
   movementButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: sizing.touch, borderRadius: radii.md, borderWidth: StyleSheet.hairlineWidth },
-  movementIn: { backgroundColor: colors.brandSoft, borderColor: colors.brandSoft },
+  movementIn: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
   movementOut: { backgroundColor: colors.amberSoft, borderColor: colors.amberSoft },
   movementButtonText: { fontSize: 13, fontWeight: fontWeights.bold },
   heroCard: { marginTop: spacing.lg },

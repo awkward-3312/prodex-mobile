@@ -2,7 +2,7 @@ import { useCashRegister } from '../../src/context/CashRegisterContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { UserAvatar } from '../../src/components/ui/UserAvatar';
@@ -53,6 +53,8 @@ function DeltaChip({ pct }: { pct: number | null }) {
 }
 
 export default function DashboardScreen() {
+  const { width, fontScale } = useWindowDimensions();
+  const quickActionStyle = width / fontScale < 360 ? styles.actionWrapped : undefined;
   const { status: registerStatus } = useCashRegister();
   const { user, tenant, operationalContext, session, signOut, hasPermission } = useAuth();
   const firstName = user?.name?.trim().split(/\s+/)[0] ?? null;
@@ -112,10 +114,10 @@ export default function DashboardScreen() {
 
         <Text style={styles.sectionTitle}>Accesos rápidos</Text>
         <View style={styles.actionsGrid}>
-          <QuickAction label={registerStatus === 'open' ? 'Nueva venta' : 'Abrir caja'} icon="add" primary onPress={() => router.push(registerStatus === 'open' ? '/(tabs)/pos' : '/cash-register/open')} />
-          <QuickAction label="Productos" icon="pricetag-outline" onPress={() => router.push('/(tabs)/inventory')} />
-          <QuickAction label="Inventario" icon="cube-outline" onPress={() => router.push('/(tabs)/inventory')} />
-          {canViewClients ? <QuickAction label="Clientes" icon="people-outline" onPress={() => router.push('/clients')} /> : null}
+          <QuickAction style={quickActionStyle} label={registerStatus === 'open' ? 'Nueva venta' : 'Abrir caja'} icon="add" primary onPress={() => router.push(registerStatus === 'open' ? '/(tabs)/pos' : '/cash-register/open')} />
+          <QuickAction style={quickActionStyle} label="Productos" icon="pricetag-outline" onPress={() => router.push('/(tabs)/inventory')} />
+          <QuickAction style={quickActionStyle} label="Inventario" icon="cube-outline" onPress={() => router.push('/(tabs)/inventory')} />
+          {canViewClients ? <QuickAction style={quickActionStyle} label="Clientes" icon="people-outline" onPress={() => router.push('/clients')} /> : null}
         </View>
 
         {loading ? (
@@ -196,16 +198,17 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xxl },
   sectionTitle: { marginTop: spacing.xl, marginBottom: spacing.sm, color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
-  actionsGrid: { flexDirection: 'row', gap: spacing.sm },
+  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.xl },
+  actionWrapped: { flexBasis: '40%' },
   center: { paddingTop: spacing.xxl, alignItems: 'center' },
-  secondaryHero: { marginTop: spacing.md },
+  secondaryHero: { marginTop: spacing.lg },
   deltaRow: { flexDirection: 'row', marginTop: spacing.sm },
   deltaChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.sm, paddingVertical: 5, borderRadius: radii.pill },
   deltaText: { fontSize: 11, fontWeight: fontWeights.bold },
   card: { ...surfaces.card, marginTop: spacing.lg, padding: spacing.lg },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: spacing.md },
   cardTitle: { color: colors.ink, fontSize: typography.subtitle, fontWeight: fontWeights.bold },
-  link: { color: colors.brand, fontSize: 12, fontWeight: fontWeights.bold },
+  link: { color: colors.accentDark, fontSize: 12, fontWeight: fontWeights.bold },
   weekTotal: { marginTop: 2, color: colors.brandDark, fontSize: typography.metric, fontWeight: fontWeights.heavy },
   chartRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 96, gap: spacing.xs },
   chartBarColumn: { flex: 1, alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: spacing.xs },
@@ -213,7 +216,7 @@ const styles = StyleSheet.create({
   chartBarFill: { width: '100%', borderRadius: radii.xs, backgroundColor: colors.brandSoft },
   chartBarFillActive: { backgroundColor: colors.accent },
   chartBarLabel: { color: colors.inkMuted, fontSize: 11, fontWeight: fontWeights.semibold },
-  chartBarLabelActive: { color: colors.brandDark },
+  chartBarLabelActive: { color: colors.accentDark },
   topProductRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   topProductRank: { color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.bold, width: 16 },
   topProductName: { flex: 1, color: colors.ink, fontSize: 13, fontWeight: fontWeights.semibold },

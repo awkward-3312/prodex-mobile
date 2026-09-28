@@ -82,7 +82,7 @@ export default function ReportsScreen() {
   }, [load]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <AppHeader title="Reportes" subtitle="Resumen del negocio" onBack={() => router.back()} />
 
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
   rangeRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, marginBottom: spacing.md },
   center: { paddingTop: spacing.xxl, alignItems: 'center' },
-  heroCard: { ...surfaces.card, padding: spacing.xl, alignItems: 'center', backgroundColor: colors.brandSoft },
+  heroCard: { ...surfaces.card, padding: spacing.xl, alignItems: 'center', backgroundColor: colors.brandSoft, borderTopWidth: 3, borderTopColor: colors.accent },
   heroValue: { color: colors.brandDark, fontSize: 32, fontWeight: fontWeights.heavy },
   heroLabel: { marginTop: 2, color: colors.brandDark, fontSize: 12, fontWeight: fontWeights.bold },
   heroChipsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
@@ -152,6 +152,6 @@ const styles = StyleSheet.create({
   listBarTrack: { flex: 1, minWidth: 0 },
   listName: { color: colors.ink, fontSize: 12, fontWeight: fontWeights.semibold },
   barBackground: { marginTop: 3, height: 5, borderRadius: radii.pill, backgroundColor: colors.line, overflow: 'hidden' },
-  barFill: { height: '100%', borderRadius: radii.pill, backgroundColor: colors.brand },
+  barFill: { height: '100%', borderRadius: radii.pill, backgroundColor: colors.accent },
   listValue: { color: colors.ink, fontSize: 12, fontWeight: fontWeights.bold },
 });

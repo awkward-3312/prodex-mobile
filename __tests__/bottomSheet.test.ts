@@ -1,10 +1,27 @@
+jest.mock('react-native-safe-area-context', () => {
+  const actual = jest.requireActual('react-native-safe-area-context');
+  return { ...actual, SafeAreaProvider: ({ children }: any) => children };
+});
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
-jest.mock('../src/components/motion', () => {
-  const { Pressable, View } = jest.requireActual('react-native');
-  const React = jest.requireActual('react');
+let mockReducedMotion = false;
+
+jest.mock('react-native-reanimated', () => {
+  const { View } = jest.requireActual('react-native');
   return {
-    PressableScale: ({ children, onPress, ...props }: any) => React.createElement(Pressable, { onPress, ...props }, children),
-    FadeInView: ({ children, style }: any) => React.createElement(View, { style }, children),
+    __esModule: true,
+    default: { View, createAnimatedComponent: (Component: unknown) => Component },
+    Easing: { bezier: jest.fn(() => jest.fn()) },
+    cancelAnimation: jest.fn(),
+    runOnJS: (callback: (...args: unknown[]) => unknown) => callback,
+    useAnimatedStyle: (factory: () => unknown) => factory(),
+    useEvent: (callback: (...args: unknown[]) => unknown) => callback,
+    useReducedMotion: () => mockReducedMotion,
+    useSharedValue: (value: unknown) => ({ value }),
+    withSpring: jest.fn((value: unknown) => value),
+    withTiming: jest.fn((value: unknown, _config: unknown, callback?: (finished: boolean) => void) => {
+      callback?.(true);
+      return value;
+    }),
   };
 });
 
@@ -23,7 +40,7 @@ it('keeps the Modal closed when not visible', () => {
   expect(root.root.findByType(Modal).props.visible).toBe(false);
 });
 
-it('shows its content and calls onClose on backdrop tap and on the system back/request-close event', () => {
+it('shows its content and calls onClose once on backdrop tap', () => {
   const onClose = jest.fn();
   let root!: ReturnType<typeof create>;
   act(() => { root = create(React.createElement(BottomSheet, { visible: true, onClose, children: React.createElement(Text, null, 'contenido del sheet') })); });
@@ -33,11 +50,20 @@ it('shows its content and calls onClose on backdrop tap and on the system back/r
 
   const backdrop = findByLabel(root, 'Cerrar')[0];
   expect(backdrop).toBeTruthy();
-  act(() => { backdrop.props.onPress(); });
+  const pressBackdrop = backdrop.props.onPress;
+  act(() => { pressBackdrop(); });
   expect(onClose).toHaveBeenCalledTimes(1);
 
+  act(() => { pressBackdrop(); });
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+it('maps the system back/request-close event to the same dismissal path', () => {
+  const onClose = jest.fn();
+  let root!: ReturnType<typeof create>;
+  act(() => { root = create(React.createElement(BottomSheet, { visible: true, onClose, children: React.createElement(Text, null, 'contenido') })); });
   act(() => { root.root.findByType(Modal).props.onRequestClose(); });
-  expect(onClose).toHaveBeenCalledTimes(2);
+  expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 it('renders an explicit close button only when showCloseButton is requested', () => {
@@ -52,14 +78,31 @@ it('renders an explicit close button only when showCloseButton is requested', ()
   expect(findByLabel(openRoot, 'Cerrar selector').length).toBeGreaterThan(1);
 });
 
-it('omits the handle when showHandle is false', () => {
+it('renders a drag handle only when the real sheet gesture is enabled', () => {
   let root!: ReturnType<typeof create>;
-  act(() => { root = create(React.createElement(BottomSheet, { visible: true, onClose: jest.fn(), showHandle: false, children: React.createElement(Text, null, 'x') })); });
+  act(() => { root = create(React.createElement(BottomSheet, { visible: true, onClose: jest.fn(), children: React.createElement(Text, null, 'x') })); });
   const handleLike = root.root.findAllByType(View).filter((node) => {
     const style = Array.isArray(node.props.style) ? node.props.style.flat() : [node.props.style];
-    return style.some((s: any) => s && s.width === 38 && s.height === 4);
+    return style.some((s: any) => s && s.width === 40 && s.height === 4);
   });
-  expect(handleLike).toHaveLength(0);
+  expect(handleLike).toHaveLength(1);
+
+  let fixedRoot!: ReturnType<typeof create>;
+  act(() => { fixedRoot = create(React.createElement(BottomSheet, { visible: true, gestureEnabled: false, onClose: jest.fn(), children: React.createElement(Text, null, 'x') })); });
+  const fixedHandleLike = fixedRoot.root.findAllByType(View).filter((node) => {
+    const style = Array.isArray(node.props.style) ? node.props.style.flat() : [node.props.style];
+    return style.some((s: any) => s && s.width === 40 && s.height === 4);
+  });
+  expect(fixedHandleLike).toHaveLength(0);
+});
+
+it('blocks backdrop and hardware-back dismissal when dismissible is false', () => {
+  const onClose = jest.fn();
+  let root!: ReturnType<typeof create>;
+  act(() => { root = create(React.createElement(BottomSheet, { visible: true, dismissible: false, onClose, children: React.createElement(Text, null, 'contenido') })); });
+  expect(findByLabel(root, 'Cerrar')).toHaveLength(0);
+  act(() => { root.root.findByType(Modal).props.onRequestClose(); });
+  expect(onClose).not.toHaveBeenCalled();
 });
 
 it('uses a fixed height when heightPct is given, and a capped max-height otherwise', () => {

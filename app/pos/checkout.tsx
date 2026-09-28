@@ -69,7 +69,7 @@ function friendlyPreflightError(error: PreflightError) {
   if (error.code === 'invalid_account') return 'Selecciona una cuenta válida para el método de pago.';
   if (error.code === 'payment_total_invalid') return 'El total pagado no coincide con el total validado.';
   if (error.code === 'invalid_operational_context') return 'El contexto operativo no permite completar esta venta.';
-  return saleSubmissionMessage(error.code);
+  return saleSubmissionMessage(error.code, 'business_error');
 }
 
 /** Shared "something needs attention" line: icon + message on a tinted background, one visual language for every error/warning in this screen instead of bare colored text. */
@@ -112,6 +112,8 @@ function CheckoutScreenContent() {
   const preflightAbortRef = useRef<AbortController | null>(null);
   const preflightSeq = useRef(0);
   const offlinePreflightErrorRef = useRef(false);
+  const clientSelectorTriggerRef = useRef<View | null>(null);
+  const clientSelectorTitleRef = useRef<View | null>(null);
   const connectivity = useConnectivity();
 
   const availableMethods = useMemo(() => context?.payment_methods.filter((method) => method.is_supported && method.is_available) ?? [], [context]);
@@ -128,11 +130,13 @@ function CheckoutScreenContent() {
     accountSelections,
   }), [accountSelections, cart.items, context?.operational_context, paymentInputs, selectedCustomer?.id, selection, session?.baseUrl, session?.accessToken]);
   const activePreflight = preflightKey === currentPreflightKey ? preflight : null;
+  const previousIntentKey = useRef(currentPreflightKey);
+  const submissionError = cart.submission.status === 'business_error' ? cart.submission.error : null;
   const activePreflightError = preflightErrorKey === currentPreflightKey ? preflightError : null;
   const fiscalSummary = useMemo<FiscalSummary | null>(() => (activePreflight ? fiscalSummaryFromPreflight(activePreflight) : null), [activePreflight]);
   const displayTotalCents = fiscalSummary?.totalCents ?? cart.totalCents;
   const cashInput = selectedMethod ? paymentInputs[String(selectedMethod.id)] ?? '' : '';
-  const cashCents = parseMinorUnits(cashInput);
+  const cashCents = usingAutoPaymentAmount ? displayTotalCents : parseMinorUnits(cashInput);
   const backendChangeCents = activePreflight ? parseMinorUnits(activePreflight.payments.change) : null;
   const cashChangeCents = backendChangeCents ?? Math.max(0, cashCents - displayTotalCents);
   const cashShortfallCents = Math.max(0, displayTotalCents - cashCents);
@@ -202,6 +206,10 @@ function CheckoutScreenContent() {
   }, [loadClients]);
 
   useEffect(() => {
+    if (previousIntentKey.current !== currentPreflightKey) {
+      previousIntentKey.current = currentPreflightKey;
+      cart.saleSubmission.clearBusinessError();
+    }
     preflightAbortRef.current?.abort();
     preflightSeq.current += 1;
     setPreflight(null);
@@ -227,7 +235,7 @@ function CheckoutScreenContent() {
     const method = availableMethods.find((candidate) => candidate.id === selection);
     if (!method) return [];
     const typedAmount = parseMinorUnits(paymentInputs[String(method.id)] ?? '');
-    const amount = typedAmount > 0 ? typedAmount : (totalOverrideCents ?? displayTotalCents);
+    const amount = usingAutoPaymentAmount ? (totalOverrideCents ?? displayTotalCents) : typedAmount;
     return [paymentIntentLine(method.id, amount, accountSelections[String(method.id)])];
   };
 
@@ -243,8 +251,8 @@ function CheckoutScreenContent() {
     if (missingAccount) return `Selecciona una cuenta para ${displayPaymentMethodName(missingAccount)}.`;
     return null;
   }, [accountSelections, availableMethods, cart.items.length, context, paymentInputs, selectedCustomer, selectedMethod, selection]);
-  const preflightPending = !validationMessage && preflightKey !== currentPreflightKey && preflightErrorKey !== currentPreflightKey;
-  const preflightStatus = activePreflight?.can_submit ? 'validated' : preflightLoading || preflightPending ? 'loading' : activePreflightError ? 'error' : 'pending';
+  const preflightPending = !submissionError && !validationMessage && preflightKey !== currentPreflightKey && preflightErrorKey !== currentPreflightKey;
+  const preflightStatus = submissionError ? 'error' : activePreflight?.can_submit ? 'validated' : preflightLoading || preflightPending ? 'loading' : activePreflightError ? 'error' : 'pending';
 
   const submitPreflight = async (totalOverrideCents?: number, isAutoCorrection = false) => {
     if (!session?.baseUrl || !session.accessToken || !selectedCustomer || validationMessage || cart.saleSubmission.isLocked()) return;
@@ -304,12 +312,13 @@ function CheckoutScreenContent() {
 
   useEffect(() => {
     if (!context || contextLoading || validationMessage) return;
+    if (submissionError) return;
     if (preflightKey === currentPreflightKey || preflightErrorKey === currentPreflightKey) return;
     if (preflightLoading || cart.saleSubmission.isLocked()) return;
     const timeout = setTimeout(() => { void submitPreflight(); }, 400);
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [context, contextLoading, validationMessage, currentPreflightKey, preflightKey, preflightErrorKey, preflightLoading]);
+  }, [context, contextLoading, validationMessage, currentPreflightKey, preflightKey, preflightErrorKey, preflightLoading, submissionError]);
 
   // Safe to auto-clear: nothing was sent while offline, so this only lets the
   // debounced effect above re-attempt the same (still unvalidated) preflight.
@@ -330,16 +339,16 @@ function CheckoutScreenContent() {
   const renderSinglePaymentForm = () => {
     if (!selectedMethod) return null;
     if (selectedMethod.is_cash) {
-      return <FadeInView key={`cash-${String(selectedMethod.id)}`} distance={8}><CashPaymentForm totalCents={displayTotalCents} receivedInput={cashInput} receivedCents={cashCents} shortfallCents={cashShortfallCents} changeCents={cashChangeCents} quickAmounts={quickAmounts} currency={currency} onChange={(value) => updatePaymentInput(selectedMethod.id, value)} onQuickAmount={(amount) => updatePaymentInput(selectedMethod.id, centsToInput(amount))} />{renderAccountSelector(selectedMethod)}</FadeInView>;
+      return <FadeInView key={`cash-${String(selectedMethod.id)}`} distance={8}><CashPaymentForm autoAmount={usingAutoPaymentAmount} totalCents={displayTotalCents} receivedInput={cashInput} receivedCents={cashCents} shortfallCents={cashShortfallCents} changeCents={cashChangeCents} quickAmounts={quickAmounts} currency={currency} onChange={(value) => updatePaymentInput(selectedMethod.id, value)} onQuickAmount={(amount) => updatePaymentInput(selectedMethod.id, centsToInput(amount))} />{renderAccountSelector(selectedMethod)}</FadeInView>;
     }
     const selectedMethodLabel = displayPaymentMethodName(selectedMethod);
-    return <FadeInView key={`single-${String(selectedMethod.id)}`} distance={8} style={styles.paymentBox}><Text style={styles.inputLabel}>Monto a aplicar</Text><TextInput accessibilityLabel={`Monto para ${selectedMethodLabel}`} keyboardType="decimal-pad" value={paymentInputs[String(selectedMethod.id)] ?? ''} onChangeText={(value) => updatePaymentInput(selectedMethod.id, value)} placeholder={centsToInput(displayTotalCents)} placeholderTextColor={colors.inkMuted} style={styles.input} /><Text style={styles.hint}>No ingreses datos de tarjeta ni referencias sensibles. El monto será confirmado por PRODEX.</Text>{renderAccountSelector(selectedMethod)}</FadeInView>;
+    return <FadeInView key={`single-${String(selectedMethod.id)}`} distance={8} style={styles.paymentBox}><Text style={styles.inputLabel}>Monto a aplicar</Text><TextInput accessibilityLabel={`Monto para ${selectedMethodLabel}`} keyboardType="decimal-pad" value={paymentInputs[String(selectedMethod.id)] ?? ''} onChangeText={(value) => updatePaymentInput(selectedMethod.id, value)} placeholder={centsToInput(displayTotalCents)} placeholderTextColor={colors.inkMuted} selectionColor={colors.accent} cursorColor={colors.accentDark} style={styles.input} /><Text style={styles.hint}>No ingreses datos de tarjeta ni referencias sensibles. El monto será confirmado por PRODEX.</Text>{renderAccountSelector(selectedMethod)}</FadeInView>;
   };
 
   const renderMixedPaymentForm = () => (
     <FadeInView key="mixed-payment" distance={8} style={styles.paymentBox}>
       <Text style={styles.inputLabel}>Distribuye el pago</Text>
-      {availableMethods.map((method) => <View key={String(method.id)} style={styles.mixedLine}><Text style={styles.mixedLabel}>{displayPaymentMethodName(method)}</Text><TextInput accessibilityLabel={`Monto para ${displayPaymentMethodName(method)}`} keyboardType="decimal-pad" value={paymentInputs[String(method.id)] ?? ''} onChangeText={(value) => updatePaymentInput(method.id, value)} placeholder="0.00" placeholderTextColor={colors.inkMuted} style={styles.input} />{renderAccountSelector(method)}</View>)}
+      {availableMethods.map((method) => <View key={String(method.id)} style={styles.mixedLine}><Text style={styles.mixedLabel}>{displayPaymentMethodName(method)}</Text><TextInput accessibilityLabel={`Monto para ${displayPaymentMethodName(method)}`} keyboardType="decimal-pad" value={paymentInputs[String(method.id)] ?? ''} onChangeText={(value) => updatePaymentInput(method.id, value)} placeholder="0.00" placeholderTextColor={colors.inkMuted} selectionColor={colors.accent} cursorColor={colors.accentDark} style={styles.input} />{renderAccountSelector(method)}</View>)}
     </FadeInView>
   );
 
@@ -349,7 +358,6 @@ function CheckoutScreenContent() {
     if (cart.saleSubmission.getSnapshot().status === 'session_expired') await signOut();
     if (cart.saleSubmission.getSnapshot().status === 'business_error') {
       if (cart.saleSubmission.getSnapshot().error?.code === 'cash_register_not_open') invalidateRegister();
-      setPreflight(null); setPreflightKey('');
     }
   };
   const retrySale = async () => {
@@ -389,15 +397,23 @@ function CheckoutScreenContent() {
     return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}><FadeInView style={styles.empty}><Ionicons name="cart-outline" size={42} color={colors.inkMuted} /><Text style={styles.emptyTitle}>No hay una venta activa</Text><Text style={styles.emptyText}>Agrega productos desde el POS para comenzar.</Text><Button label="Volver al POS" accessibilityLabel="Volver al POS" onPress={() => router.replace('/(tabs)/pos')} style={styles.emptyButton} /></FadeInView></SafeAreaView>;
   }
 
-  const canConfirm = activePreflight?.can_submit === true;
+  const canConfirm = !submissionError && activePreflight?.can_submit === true;
   const ctaBusy = preflightStatus === 'loading';
-  const ctaLabel = canConfirm ? 'Confirmar venta' : ctaBusy ? 'Calculando...' : activePreflightError ? 'Reintentar validación' : 'Revisar venta';
-  const ctaDisabled = !!validationMessage || ctaBusy || (!canConfirm && !activePreflightError);
-  const ctaAction = () => { if (canConfirm) void confirmSale(); else if (activePreflightError) void submitPreflight(); };
+  const ctaLabel = canConfirm ? 'Confirmar venta' : ctaBusy ? 'Calculando...' : activePreflightError || submissionError ? 'Reintentar validación' : 'Revisar venta';
+  const ctaDisabled = !!validationMessage || ctaBusy || (!canConfirm && !activePreflightError && !submissionError);
+  const ctaAction = () => {
+    if (canConfirm) void confirmSale();
+    else if (activePreflightError || submissionError) {
+      setPreflight(null);
+      setPreflightKey('');
+      cart.saleSubmission.clearBusinessError();
+      void submitPreflight();
+    }
+  };
   const needsRegisterOpen = activePreflightError === 'Necesitas abrir caja antes de registrar una venta.' || cart.submission.error?.code === 'cash_register_not_open';
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <FadeInView distance={6}>
@@ -413,14 +429,13 @@ function CheckoutScreenContent() {
           <FadeInView delay={55} distance={6} style={styles.customer}>
             <View style={styles.customerIconBadge}><Ionicons name="person-outline" size={18} color={colors.brand} /></View>
             <View style={styles.customerCopy}><Text style={styles.customerLabel}>Cliente actual</Text><Text style={styles.customerName} numberOfLines={1}>{selectedCustomer?.name ?? 'Selecciona un cliente'}</Text>{selectedCustomer?.rtn ? <Text style={styles.customerMeta}>RTN {selectedCustomer.rtn}</Text> : null}</View>
-            <PressableScale accessibilityLabel="Cambiar cliente" accessibilityRole="button" onPress={() => setClientModalVisible(true)} style={styles.changeButton}><Text style={styles.change}>Cambiar</Text></PressableScale>
+            <PressableScale ref={clientSelectorTriggerRef} accessibilityLabel="Cambiar cliente" accessibilityRole="button" onPress={() => setClientModalVisible(true)} style={styles.changeButton}><Text style={styles.change}>Cambiar</Text></PressableScale>
           </FadeInView>
 
           <Text style={styles.sectionTitle}>Método de pago</Text>
           <View style={styles.methods}>{availableMethods.map((option) => <PaymentMethodCard key={String(option.id)} method={option} selected={selection === option.id} onPress={() => setSelection(option.id)} />)}{context?.capabilities.mixed_payments && <PaymentMethodCard method={{ id: 'mixed', name: 'Pago mixto', type: 'mixed', is_cash: false, is_card: false }} selected={selection === 'mixed'} onPress={() => setSelection('mixed')} />}</View>
           {selection === 'mixed' ? renderMixedPaymentForm() : renderSinglePaymentForm()}
 
-          {cart.submission.status === 'business_error' && cart.submission.error && <AlertBox tone="critical" icon="alert-circle-outline" message={cart.submission.error.message} />}
           {validationMessage && <AlertBox tone="warning" icon="information-circle-outline" message={validationMessage} />}
           {needsRegisterOpen && (
             <FadeInView style={[styles.alertBox, styles.alertWarning, styles.registerNotice]} distance={4}>
@@ -431,10 +446,10 @@ function CheckoutScreenContent() {
               </View>
             </FadeInView>
           )}
-          {activePreflightError && <View style={styles.preflightErrors}>{activePreflightError.split('\n').map((line) => <Text key={line} style={styles.preflightErrorLine}>{line}</Text>)}</View>}
-          <FadeInView style={[styles.preflightStatus, preflightStatus === 'validated' && styles.validated, preflightStatus === 'error' && styles.errored]} distance={4} duration={motion.duration.fast}>
-            {preflightStatus === 'loading' ? <ActivityIndicator size="small" color={colors.brand} /> : <Ionicons name={preflightStatus === 'validated' ? 'checkmark-circle' : preflightStatus === 'error' ? 'alert-circle-outline' : 'shield-checkmark-outline'} size={20} color={preflightStatus === 'validated' ? colors.accent : preflightStatus === 'error' ? colors.red : colors.inkMuted} />}
-            <Text style={[styles.preflightStatusText, preflightStatus === 'validated' && styles.validatedText, preflightStatus === 'error' && styles.erroredText]}>{preflightStatus === 'validated' ? 'Venta validada por PRODEX. Aún no se ha confirmado el cobro.' : preflightStatus === 'loading' ? 'Calculando impuesto con PRODEX...' : preflightStatus === 'error' ? 'No pudimos validar la venta.' : 'Pendiente de validación fiscal.'}</Text>
+          {activePreflightError && <View accessibilityRole="alert" style={styles.preflightErrors}>{activePreflightError.split('\n').map((line) => <Text key={line} style={styles.preflightErrorLine}>{line}</Text>)}</View>}
+          <FadeInView accessibilityLiveRegion="polite" style={[styles.preflightStatus, preflightStatus === 'validated' && styles.validated, preflightStatus === 'error' && styles.errored]} distance={4} duration={motion.duration.fast}>
+            {preflightStatus === 'loading' ? <ActivityIndicator size="small" color={colors.accentDark} /> : <Ionicons name={preflightStatus === 'error' ? 'alert-circle-outline' : 'information-circle-outline'} size={20} color={preflightStatus === 'error' ? colors.red : colors.accentDark} />}
+            <Text accessibilityRole={preflightStatus === 'error' ? 'alert' : undefined} style={[styles.preflightStatusText, preflightStatus === 'validated' && styles.validatedText, preflightStatus === 'error' && styles.erroredText]}>{submissionError ? `Venta no registrada. ${submissionError.message}` : preflightStatus === 'validated' ? 'Importes revisados por PRODEX. Confirma para registrar la venta.' : preflightStatus === 'loading' ? 'Calculando impuesto con PRODEX...' : preflightStatus === 'error' ? 'No pudimos validar la venta.' : 'Pendiente de validación fiscal.'}</Text>
           </FadeInView>
 
           <Button label={ctaLabel} accessibilityLabel={ctaLabel} disabled={ctaDisabled} loading={ctaBusy} onPress={ctaAction} style={styles.confirmButton} />
@@ -446,10 +461,10 @@ function CheckoutScreenContent() {
           setCreatingCustomer(false);
         }} /> : null}</SafeAreaView>
       </Modal>
-      <BottomSheet visible={clientModalVisible} onClose={() => setClientModalVisible(false)} maxHeightPct={0.82} showCloseButton closeAccessibilityLabel="Cerrar búsqueda de clientes">
-        <Text style={styles.modalTitle}>Seleccionar cliente</Text>
+      <BottomSheet visible={clientModalVisible} onClose={() => setClientModalVisible(false)} maxHeightPct={0.82} showCloseButton closeAccessibilityLabel="Cerrar búsqueda de clientes" accessibilityLabel="Seleccionar cliente" keyboardAvoiding initialFocusRef={clientSelectorTitleRef} returnFocusRef={clientSelectorTriggerRef}>
+        <View ref={clientSelectorTitleRef} accessible accessibilityRole="header"><Text style={styles.modalTitle}>Seleccionar cliente</Text></View>
         {hasPermission?.('Customers_add') ? <Button label="Nuevo cliente" icon="person-add-outline" onPress={() => { setClientModalVisible(false); setCreatingCustomer(true); }} style={styles.newClientButton} /> : null}
-        <TextInput accessibilityLabel="Buscar cliente" value={clientSearch} onChangeText={setClientSearch} placeholder="Nombre, teléfono o RTN" placeholderTextColor={colors.inkMuted} style={styles.input} />
+        <TextInput accessibilityLabel="Buscar cliente" value={clientSearch} onChangeText={setClientSearch} placeholder="Nombre, teléfono o RTN" placeholderTextColor={colors.inkMuted} selectionColor={colors.accent} cursorColor={colors.accentDark} style={styles.input} />
         {clientLoading && <FadeInView><ActivityIndicator color={colors.brand} style={styles.modalSpinner} /></FadeInView>}
         {clientError && <AlertBox tone="critical" icon="alert-circle-outline" message={clientError} />}
         <FlatList
@@ -477,7 +492,7 @@ const styles = StyleSheet.create({
   stateBox: { ...surfaces.card, alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md, padding: spacing.md },
   stateText: { color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.bold },
   customer: { ...surfaces.card, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg },
-  customerIconBadge: { width: 40, height: 40, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brandSoft },
+  customerIconBadge: { width: 40, height: 40, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
   customerCopy: { flex: 1, minWidth: 0 },
   customerLabel: { color: colors.inkMuted, fontSize: 12 },
   customerName: { marginTop: spacing.xs, color: colors.ink, fontSize: 14, fontWeight: fontWeights.bold },
@@ -494,7 +509,7 @@ const styles = StyleSheet.create({
   accountBox: { marginTop: spacing.md },
   accountList: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   accountChip: { minHeight: 38, paddingHorizontal: spacing.md, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
-  accountChipSelected: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
+  accountChipSelected: { borderColor: colors.accentDark, backgroundColor: colors.accentSoft },
   accountChipText: { color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.semibold },
   accountChipTextSelected: { color: colors.brandDark },
   confirmButton: { marginTop: spacing.lg },
@@ -510,7 +525,7 @@ const styles = StyleSheet.create({
   preflightErrorLine: { color: colors.red, fontSize: 12, fontWeight: fontWeights.bold, lineHeight: 17 },
   preflightStatus: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   preflightStatusText: { flex: 1, color: colors.inkMuted, fontSize: 12, fontWeight: fontWeights.bold, lineHeight: 17 },
-  validated: { backgroundColor: colors.brandSoft, borderColor: colors.brandSoft },
+  validated: { backgroundColor: colors.accentSoft, borderColor: colors.accentSoft },
   validatedText: { color: colors.ink },
   errored: { backgroundColor: colors.redSoft, borderColor: colors.redSoft },
   erroredText: { color: colors.red },

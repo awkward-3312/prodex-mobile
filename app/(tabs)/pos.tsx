@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FadeInView, PressableScale } from '../../src/components/motion';
 import { CartSheet } from '../../src/components/pos/CartSheet';
@@ -14,7 +14,7 @@ import { PosSearchBar } from '../../src/components/pos/PosSearchBar';
 import { ProductCard } from '../../src/components/pos/ProductCard';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { useAuth } from '../../src/context/AuthContext';
-import { canAddProductQuantity, usePosCart } from '../../src/context/PosCartContext';
+import { addProductToCartItems, usePosCart } from '../../src/context/PosCartContext';
 import { getMobilePosCatalog, mapMobilePosCatalogItemToPosProduct, mergeCatalogPages, MobilePosCatalogError } from '../../src/services/pos/mobilePosCatalogService';
 import { colors, fontWeights, radii, shadows, spacing } from '../../src/theme';
 import type { MobilePosCatalogItem, MobilePosCategory, MobilePosPagination } from '../../src/types/mobilePosCatalog';
@@ -45,7 +45,6 @@ function PosScreenContent() {
   const { width: windowWidth } = useWindowDimensions();
   const [layoutWidth, setLayoutWidth] = useState(windowWidth);
   const cardWidth = Math.max(0, (layoutWidth - spacing.lg * 2 - spacing.md) / 2);
-  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [categoryId, setCategoryId] = useState<SelectedCategory>(null);
@@ -70,6 +69,10 @@ function PosScreenContent() {
   const previousLocationRef = useRef<string | number | null | undefined>(undefined);
   const { session, inventoryLocationId, signOut } = useAuth();
   const { items: cartItems, itemCount, subtotalCents, discountCents, taxCents, totalCents, cartLocked, submission, salesRevision, addProduct, increase, decrease, remove } = usePosCart();
+  const cartItemsRef = useRef(cartItems);
+  const cartLockedRef = useRef(cartLocked);
+  cartItemsRef.current = cartItems;
+  cartLockedRef.current = cartLocked;
 
   useEffect(() => {
     mounted.current = true;
@@ -204,19 +207,24 @@ function PosScreenContent() {
   };
 
   const handleAddProduct = useCallback((product: PosProduct) => {
-    if (cartLocked) { router.push('/pos/checkout'); return; }
+    if (cartLockedRef.current) { router.push('/pos/checkout'); return false; }
     if (product.canSell === false) {
       showMessage(product.sellabilityReason ?? 'Este producto no puede venderse.', 'warning');
-      return;
+      return false;
     }
-    const existing = cartItems.find((item) => item.product.id === product.id);
-    if (!canAddProductQuantity(existing, product, 1)) {
+    const nextItems = addProductToCartItems(cartItemsRef.current, product, 1);
+    if (nextItems === cartItemsRef.current) {
       showMessage('Stock máximo alcanzado', 'warning');
-      return;
+      return false;
     }
+    cartItemsRef.current = nextItems;
     addProduct(product);
     showMessage(`${product.name} agregado al carrito`, 'success');
-  }, [addProduct, cartItems, cartLocked, showMessage]);
+    return true;
+  }, [addProduct, showMessage]);
+
+  const openCart = useCallback(() => setCartVisible(true), []);
+  const closeCart = useCallback(() => setCartVisible(false), []);
 
   const handleCheckoutFromCart = useCallback(() => {
     const decision = decideCheckoutNavigation({ cartVisible, navigating: checkoutNavigatingRef.current });
@@ -231,7 +239,7 @@ function PosScreenContent() {
   }, [cartVisible]);
 
   const renderProduct = useCallback(({ item }: { item: PosProduct }) => (
-    <View style={[styles.productSlot, { width: cardWidth }]}><ProductCard product={item} onPress={() => handleAddProduct(item)} style={styles.productCard} /></View>
+    <View style={[styles.productSlot, { width: cardWidth }]}><ProductCard product={item} onPress={handleAddProduct} style={styles.productCard} /></View>
   ), [cardWidth, handleAddProduct]);
 
   const renderSubmissionNotice = () => {
@@ -255,7 +263,7 @@ function PosScreenContent() {
         horizontal
         data={categoryChips}
         keyExtractor={(item) => String(item.id ?? 'all')}
-        renderItem={({ item }) => <CategoryChip label={item.name} selected={categoryId === item.id} onPress={() => setCategoryId(item.id)} />}
+        renderItem={({ item }) => <CategoryChip label={item.name} selected={categoryId === item.id} onPress={() => setCategoryId(item.id)} motionEnabled />}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.categories}
       />
@@ -284,16 +292,16 @@ function PosScreenContent() {
         ListHeaderComponent={renderHeader()}
         ListEmptyComponent={renderEmpty()}
         ListFooterComponent={loadingMore ? <View style={styles.footerSpinner}><ActivityIndicator color={colors.brand} /></View> : null}
-        contentContainerStyle={[styles.content, { paddingBottom: 96 + insets.bottom }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 96 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.35}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accentDark} colors={[colors.accentDark]} />}
       />
-      {message && <FadeInView distance={8} style={[styles.snackbarWrap, { bottom: 136 + insets.bottom }]}><PressableScale accessibilityLabel="Cerrar mensaje" accessibilityRole="button" onPress={() => setMessage(null)} style={[styles.snackbar, message.tone === 'success' ? styles.snackbarSuccess : styles.snackbarWarning]}><Ionicons name={message.tone === 'success' ? 'checkmark-circle' : 'alert-circle-outline'} size={18} color={message.tone === 'success' ? colors.green : colors.amber} /><Text style={styles.messageText}>{message.text}</Text><Ionicons name="close" size={16} color={colors.inkMuted} /></PressableScale></FadeInView>}
-      <CartSummaryBar itemCount={itemCount} totalCents={totalCents} onViewCart={() => setCartVisible(true)} onCheckout={handleCheckoutFromCart} />
-      <CartSheet visible={cartVisible} items={cartItems} subtotalCents={subtotalCents} discountCents={discountCents} taxCents={taxCents} totalCents={totalCents} onClose={() => setCartVisible(false)} onIncrease={increase} onDecrease={decrease} onRemove={remove} onCheckout={handleCheckoutFromCart} />
+      {message && <FadeInView distance={8} style={[styles.snackbarWrap, { bottom: 136 }]}><PressableScale accessibilityLabel="Cerrar mensaje" accessibilityRole="button" onPress={() => setMessage(null)} style={[styles.snackbar, message.tone === 'success' ? styles.snackbarSuccess : styles.snackbarWarning]}><Ionicons name={message.tone === 'success' ? 'checkmark-circle' : 'alert-circle-outline'} size={18} color={message.tone === 'success' ? colors.green : colors.amber} /><Text style={styles.messageText}>{message.text}</Text><Ionicons name="close" size={16} color={colors.inkMuted} /></PressableScale></FadeInView>}
+      <CartSummaryBar itemCount={itemCount} totalCents={totalCents} onViewCart={openCart} onCheckout={handleCheckoutFromCart} />
+      <CartSheet visible={cartVisible} items={cartItems} subtotalCents={subtotalCents} discountCents={discountCents} taxCents={taxCents} totalCents={totalCents} onClose={closeCart} onIncrease={increase} onDecrease={decrease} onRemove={remove} onCheckout={handleCheckoutFromCart} />
     </SafeAreaView>
   );
 }
